@@ -3,31 +3,44 @@
 #include <stdio.h>
 #include "esp_log.h"
 // #include "key.h"
-#include "led.h"
+#include "ledc.h"
 // #include "exit.h"
 // #include "uart.h"
 // #include "esptim.h"
 #include "gptim.h"
+#include "comm.h"
 
 void app_main(void)
 {
-    led_init();
-    // uart_init(115200);
-    // exit_init();
-    timg_config_t *timcfg = malloc(sizeof(timg_config_t));
-    timcfg->timing_time = 1000000;   // 1s
-    timcfg->timer_idx = 0;
-    timcfg->timer_group = 0;
-    timcfg->auto_reload = false;
-    timcfg->alarm_value = timcfg->timing_time;
-    timcfg->timer_counter_value = 0;
-    timg_init(timcfg);
-    while(1) {
-        if(timcfg->timer_counter_value !=0) {
-            ESP_LOGI("main Timer", "Timer autoreload, count value in isr: %llu", timcfg->timer_counter_value);
-            timcfg->timer_counter_value = 0;
-        }
-        vTaskDelay(10);
-    }
+    U8 dir = 1;
+    U16 ledpwmval = 0;
 
+    ledc_config_t *ledc_config = malloc(sizeof(ledc_config_t));
+
+    ledc_config->clk_cfg = LEDC_AUTO_CLK;
+    ledc_config->timer_num = LEDC_PWM_TIMER;
+    ledc_config->freq_hz = 1000;
+    ledc_config->duty_resolution = LEDC_TIMER_14_BIT;  // 分辨率
+    ledc_config->channel = LEDC_PWM_CH0_CHANNNEL;
+    ledc_config->duty = 0;
+    ledc_config->gpio_num = LEDC_PWM_CH0_GPIO;
+    ledc_init(ledc_config);
+
+    while(1) {
+        vTaskDelay(50);
+        if (dir == 1) {
+            ledpwmval += 5;
+        } else {
+            ledpwmval -= 5;
+        }
+
+        if (ledpwmval == 100) {
+            dir = 0;
+        }
+        if (ledpwmval == 0) {
+            dir = 1;
+        }
+        ESP_LOGI("LED", "ledpwmval: %d", ledpwmval);
+        ledc_pwm_set_duty(ledc_config, ledpwmval);
+    }
 }
