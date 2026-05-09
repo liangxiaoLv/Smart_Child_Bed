@@ -116,162 +116,9 @@ GPIO 41-42: I2C0 (XL9555)
 GPIO 45-48: LCD 数据线
 ```
 
-## Flash 分区
-
-| 分区 | 偏移 | 大小 | 用途 |
-|------|------|------|------|
-| factory | 0x10000 | 896KB | 出厂固件 |
-| ota_0 | 0xF0000 | 896KB | OTA slot A |
-| ota_1 | 0x1D0000 | 896KB | OTA slot B |
-
-## BLE + WiFi 配网
-
-### 依赖清单
-
-**ESP-IDF 组件 (CMakeLists.txt REQUIRES):**
-
-| 组件 | 用途 |
-|------|------|
-| `wifi_provisioning` | 统一配网框架核心，状态机 + 凭证管理 |
-| `protocomm` | 协议通信层，BLE 传输 + 安全握手 |
-| `protobuf-c` | 配网协议序列化 (Google protobuf) |
-| `bt` 或 `nimble` | BLE 协议栈 (推荐 NimBLE，省内存) |
-| `nvs_flash` | WiFi 凭证持久化存储 |
-| `esp_wifi` | WiFi STA 驱动 |
-| `esp_netif` | lwIP 网络接口管理 |
-| `cJSON` | JSON 解析 (MQTT 上行/下行) |
-| `esp_mqtt` | MQTT 客户端 (配网后连接云端) |
-
-**移动端 App:**
-
-| 平台 | App |
-|------|-----|
-| Android / iOS | ESP BLE Provisioning (官方) |
-| 微信小程序 | 基于 Web Bluetooth API 自研 |
-
-**模块依赖链:**
-```
-prov_manager.c
-  ├── drivers/wifi/wifi.c          → esp_wifi 封装
-  ├── drivers/button/button.c      → KEY1 长按触发重配网
-  ├── app/ui_display/ui_wifi.c     → LCD 显示 PIN / 状态 / RSSI
-  ├── wifi_provisioning/manager.h  → ESP-IDF 配网框架头文件
-  └── wifi_provisioning/scheme_ble.h → BLE 传输方案
-```
-
-### 整体流程
-
-**启动 → 分支判断:**
-```
-上电 → NVS Flash 初始化 → 读取 NVS 中 WiFi 凭证
-                                    │
-                       ┌────────────┼────────────┐
-                      有凭证                   无凭证
-                       │                         │
-                       ▼                         ▼
-                 路径A: WiFi直连            路径B: BLE配网
-```
-
-**路径 A — 已配网 (WiFi 直连):**
-```
-WiFi STA 初始化 → esp_wifi_connect() 用 NVS 凭证
-                         │
-                    ┌────┴────┐
-                   成功      失败(N次重试后)
-                    │           │
-                    ▼           ▼
-               获取 IP     切路径B: 进入 BLE 配网
-                    │
-                    ▼
-             MQTT 连接 Broker
-                    │
-                    ▼
-          订阅下行主题 + 心跳 → 正常运转
-```
-
-**路径 B — BLE 配网:**
-```
-Device 侧                          Mobile 侧
-────────                           ────────
-启动 BLE 广播
-服务名: "PROV_xxxx"
-LCD 显示 POP PIN 码                扫描 BLE 设备
-       │                               │
-       ▼                               ▼
-等待连接 ────────────────────────→ 连接设备
-       │                               │
-       ▼                               ▼
-Security 1 握手 ←── PIN 验证 ───→ 输入 LCD 上的 PIN
-       │                               │
-       ▼                               ▼
-收到扫描请求 ←──────────────────── 发起 WiFi 扫描
-→ 扫描周边 AP                        │
-→ 返回 AP 列表 ──────────────────→ 显示 AP 列表
-       │                               │
-       ▼                               ▼
-收到 WiFi 凭证 ←────────────────── 用户选 AP 输密码
-(SSID + Password)                      │
-       │                               │
-       ▼                               │
-写入 NVS → 连接 WiFi                    │
-       │                               │
-  成功 → 停止 BLE 广播                 │
-  失败 → 报告手机，重试                 │
-       │                               │
-       ▼                               ▼
-进入路径A (MQTT + 正常运转)
-```
-
-**重配网 (KEY1 长按 3秒):**
-```
-KEY1 长按 → 擦除 NVS 凭证 → esp_wifi_disconnect() → 重新进入路径B
-```
-
-### 全局调用序列 (Network_Task 内部)
-
-```
-1. wifi_init()                     // NVS + lwIP + WiFi STA 初始化
-2. prov_init()                     // 注册按键回调, LCD 显示 PIN
-3. if (prov_is_provisioned()):
-     wifi_connect(NULL, NULL, 5)   // 用 NVS 凭证连接, 最多5次
-     → 成功: mqtt_client_init() + mqtt_client_start()
-     → 失败: prov_start()          // 进入 BLE 配网
-   else:
-     prov_start()                  // 直接 BLE 配网
-4. 循环: mqtt_publish_heartbeat()  // 每30秒
-```
-
-## 软件分层架构
-
-```
-app/          FreeRTOS 任务 + LVGL UI + 云端指令处理 + 日志
-services/     数据采集 / BCG体征解析 / 电机控制 / 场景联动 / OTA / 功耗 / 看门狗
-middleware/   FreeRTOS配置 / WiFi&BLE / MQTT / LVGL适配 / JSON / OTA / 电机协议
-drivers/      传感器 / BCG / 电机 / 显示屏 / 灯带 / 扬声器 / 按键 / 雷达 / XL9555
-bsp/          GPIO / I2C / UART / SPI / PWM / I2S / ADC / Timer
-```
-
-横切:
-- **platform/**: msg_bus (消息总线) + state_mgr (共享状态) + event_handler
-- **config/**: pinmap, thresholds, mqtt_topics
-- **common/**: 类型定义, 错误码, 工具函数
-
-**依赖规则:** 上层依赖下层；同层模块通过 msg_bus 通信，禁止直接依赖；所有层可依赖 config/ 和 common/。
-
 ## RTOS 任务规划
 
-| 任务 | 优先级 | 栈 | 功能 |
-|------|--------|-----|------|
-| System | 6 | 2K | 看门狗、低电量、模式切换 |
-| Motor | 5 | 3K | 电机控制、堵转/限位保护 |
-| BCG | 4 | 4K | UART 收 BCG 帧、心率呼吸解析 |
-| Sensor | 3 | 4K | I2C 周期采集传感器 |
-| Network | 3 | 8K | WiFi、MQTT、心跳 |
-| Display | 2 | 4K | LVGL 驱动 LCD |
-| Audio | 2 | 4K | 扬声器 / TTS |
-| Button | 2 | 2K | 按键消抖、长短按 |
-| OTA | 2 | 8K | 固件下载、校验、分区切换 |
-| Light | 1 | 2K | 灯带 PWM、自适应亮度 |
+ht | 1 | 2K | 灯带 PWM、自适应亮度 |
 
 ## 编码规范
 
@@ -288,4 +135,9 @@ bsp/          GPIO / I2C / UART / SPI / PWM / I2S / ADC / Timer
 
 ## 编译
 
-统一告诉用户，用户自行编译
+- 统一告诉用户，用户自行编译
+- 缺少组件时提示用户自己下载
+
+## attention
+- ESP-IDF v6.0 将 I2C 等新驱动（i2c_master.h、i2c_new_master_bus 等）从 driver 组件拆分到了
+  esp_driver_i2c等 组件

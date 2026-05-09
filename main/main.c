@@ -18,18 +18,9 @@
  ****************************************************************************************************
  */
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
-#include "nvs_flash.h"
+#include "wifi_connect.h"
 
-
-/**
- * @brief       程序入口
- * @param       无
- * @retval      无
- */
 void app_main(void)
 {
-
+    wifiConnect_init();
 }

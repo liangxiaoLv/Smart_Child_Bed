@@ -8,7 +8,28 @@
       "Bash(pip install *)",
       "Bash(python *)",
       "Bash(cat idf_component.yml)",
-      "Bash(cat main/idf_component.yml)"
+      "Bash(cat main/idf_component.yml)",
+      "Bash(Get-ChildItem -Path \"E:\\\\Smart_Child_Bed\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(New-Item -ItemType Directory -Force \"E:\\\\Smart_Child_Bed\\\\base_func\\\\wifi_connect\")",
+      "Bash(Out-Null)",
+      "Bash(Move-Item \"E:\\\\Smart_Child_Bed\\\\main\\\\wifi_connect\\\\wifi_connect.h\" \"E:\\\\Smart_Child_Bed\\\\base_func\\\\wifi_connect\\\\wifi_connect.h\")",
+      "Bash(Move-Item \"E:\\\\Smart_Child_Bed\\\\main\\\\wifi_connect\\\\wifi_connect.c\" \"E:\\\\Smart_Child_Bed\\\\base_func\\\\wifi_connect\\\\wifi_connect.c\")",
+      "Bash(Remove-Item \"E:\\\\Smart_Child_Bed\\\\main\\\\wifi_connect\" -Recurse)",
+      "Bash(Write-Host \"Done\")",
+      "PowerShell(New-Item *)",
+      "Bash(Get-ChildItem -Path \"E:\\\\Smart_Child_Bed\" -Recurse -Force)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "PowerShell(Get-ChildItem \"E:\\\\Smart_Child_Bed\\\\base_func\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem \"E:\\\\Smart_Child_Bed\\\\base_func\\\\wifi_connect\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "Bash(xargs grep -l \"blufi\")",
+      "Bash(xargs grep -l \"esp_blufi\")",
+      "Read(//c/esp/v6.0/esp-idf/**)",
+      "Read(//c/Users/Admin/**)",
+      "Read(//c/esp/**)",
+      "PowerShell(Get-ChildItem \"E:\\\\Smart_Child_Bed\" -Recurse | Where-Object { $_.Name -match \"network_prov|managed_comp|component.yml\" } | Select-Object FullName)"
     ]
   }
 }
