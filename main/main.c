@@ -1,46 +1,35 @@
+/**
+ ****************************************************************************************************
+ * @file        main.c
+ * @author      正点原子团队(ALIENTEK)
+ * @version     V1.0
+ * @date        2023-08-26
+ * @brief       ADC实验
+ * @license     Copyright (c) 2020-2032, 广州市星翼电子科技有限公司
+ ****************************************************************************************************
+ * @attention
+ *
+ * 实验平台:正点原子 ESP32-S3 开发板
+ * 在线视频:www.yuanzige.com
+ * 技术论坛:www.openedv.com
+ * 公司网址:www.alientek.com
+ * 购买地址:openedv.taobao.com
+ *
+ ****************************************************************************************************
+ */
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <stdio.h>
-#include "esp_log.h"
-// #include "key.h"
-#include "ledc.h"
-// #include "exit.h"
-// #include "uart.h"
-// #include "esptim.h"
-#include "gptim.h"
-#include "comm.h"
+#include "driver/gpio.h"
+#include "nvs_flash.h"
 
+
+/**
+ * @brief       程序入口
+ * @param       无
+ * @retval      无
+ */
 void app_main(void)
 {
-    U8 dir = 1;
-    U16 ledpwmval = 0;
 
-    ledc_config_t *ledc_config = malloc(sizeof(ledc_config_t));
-
-    ledc_config->clk_cfg = LEDC_AUTO_CLK;
-    ledc_config->timer_num = LEDC_PWM_TIMER;
-    ledc_config->freq_hz = 1000;
-    ledc_config->duty_resolution = LEDC_TIMER_14_BIT;  // 分辨率
-    ledc_config->channel = LEDC_PWM_CH0_CHANNNEL;
-    ledc_config->duty = 0;
-    ledc_config->gpio_num = LEDC_PWM_CH0_GPIO;
-    ledc_init(ledc_config);
-
-    while(1) {
-        vTaskDelay(50);
-        if (dir == 1) {
-            ledpwmval += 5;
-        } else {
-            ledpwmval -= 5;
-        }
-
-        if (ledpwmval == 100) {
-            dir = 0;
-        }
-        if (ledpwmval == 0) {
-            dir = 1;
-        }
-        ESP_LOGI("LED", "ledpwmval: %d", ledpwmval);
-        ledc_pwm_set_duty(ledc_config, ledpwmval);
-    }
 }

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.espressif.com)",
+      "Bash(gcc --version)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow installed'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python *)",
+      "Bash(cat idf_component.yml)",
+      "Bash(cat main/idf_component.yml)"
+    ]
+  }
+}
