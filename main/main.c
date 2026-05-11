@@ -19,8 +19,10 @@
  */
 
 #include "wifi_connect.h"
+#include "red_temp.h"
 
 void app_main(void)
 {
+    redTemp_start();
     wifiConnect_init();
 }

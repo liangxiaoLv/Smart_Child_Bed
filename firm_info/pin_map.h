@@ -105,3 +105,11 @@
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
+/* ═══════════════════════════════════════════════════════════════
+ * 红外体温传感器 — UART1
+ * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
+ * ═══════════════════════════════════════════════════════════════ */
+#define RED_UART_NUM        1               /* 红外使用 UART1 */
+#define RED_RX_PIN          GPIO_NUM_5      /* 红外 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
+#define RED_TX_PIN          GPIO_NUM_4      /* 红外 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
+#define RED_BAUD_RATE       115200          /* 红外串口波特率 */
