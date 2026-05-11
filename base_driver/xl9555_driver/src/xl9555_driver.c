@@ -6,11 +6,7 @@
 
 static const char *TAG = "xl9555_driver";
 
-/* I2C0 引脚（CLAUDE.md: SDA=41, SCL=42） */
-#define XL9555_I2C_PORT   I2C_NUM_0
-#define XL9555_SDA        41
-#define XL9555_SCL        42
-#define XL9555_SPEED_HZ   100000
+/* I2C0 引脚与速率来自 pin_map.h: I2C0_SDA_PIN / I2C0_SCL_PIN / I2C0_SPEED_HZ */
 
 static i2c_master_bus_handle_t s_bus = NULL;
 static i2c_master_dev_handle_t s_dev = NULL;
@@ -32,11 +28,11 @@ static esp_err_t readReg(uint8_t reg, uint8_t *val)
 esp_err_t xl9555Driver_init(void)
 {
     ESP_RETURN_ON_ERROR(
-        i2cDriver_initBus(XL9555_I2C_PORT, XL9555_SDA, XL9555_SCL, &s_bus),
+        i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &s_bus),
         TAG, "I2C0 总线初始化失败");
 
     ESP_RETURN_ON_ERROR(
-        i2cDriver_addDevice(s_bus, XL9555_I2C_ADDR, XL9555_SPEED_HZ, &s_dev),
+        i2cDriver_addDevice(s_bus, XL9555_I2C_ADDR, I2C0_SPEED_HZ, &s_dev),
         TAG, "XL9555 设备添加失败");
 
     /* 方向寄存器：Port-0 P0.0/P0.1 输入，其余输出 */

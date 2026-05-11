@@ -9,4 +9,6 @@ idf_component_register(
         esp_common
         xl9555_driver
         network_provisioning
+        bt
+        protocomm
 )

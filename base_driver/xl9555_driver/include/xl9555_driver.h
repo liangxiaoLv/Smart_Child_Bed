@@ -1,12 +1,10 @@
 #pragma once
 
+#include "pin_map.h"    /* XL9555_I2C_ADDR 等硬件地址来自此处 */
 #include "i2c_driver.h"
 #include "esp_err.h"
 #include <stdint.h>
 #include <stdbool.h>
-
-/* ── XL9555 I2C 地址 ─────────────────────────────────────── */
-#define XL9555_I2C_ADDR     0x20
 
 /* ── 寄存器地址 ──────────────────────────────────────────── */
 #define XL9555_REG_INPUT0   0x00  /* Port-0 输入 */

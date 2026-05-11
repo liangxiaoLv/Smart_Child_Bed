@@ -29,7 +29,19 @@
       "Read(//c/esp/v6.0/esp-idf/**)",
       "Read(//c/Users/Admin/**)",
       "Read(//c/esp/**)",
-      "PowerShell(Get-ChildItem \"E:\\\\Smart_Child_Bed\" -Recurse | Where-Object { $_.Name -match \"network_prov|managed_comp|component.yml\" } | Select-Object FullName)"
+      "PowerShell(Get-ChildItem \"E:\\\\Smart_Child_Bed\" -Recurse | Where-Object { $_.Name -match \"network_prov|managed_comp|component.yml\" } | Select-Object FullName)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(git push *)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell($env:IDF_PATH)",
+      "Bash(xargs grep -l \"network_prov_scheme_ble\\\\b\")",
+      "Bash(xargs cat)",
+      "PowerShell(Get-Item *)",
+      "Bash(nm /e/Smart_Child_Bed/build/esp-idf/bt/libbt.a)",
+      "Bash(nm /e/Smart_Child_Bed/build/esp-idf/bt/CMakeFiles/__idf_bt.dir/host/bluedroid/api/esp_gap_ble_api.c.obj)"
     ]
   }
 }
