@@ -1,14 +1,16 @@
 // #include "wifi_connect.h"
-// #include "red_temp.h"
+#include "red_temp.h"
 // #include "mm_wave.h"
 // #include "ens210.h"
 // #include "ens160.h"
+#include "rgb_led.h"
 
 void app_main(void)
 {
     // mm_wave_radar_info();
-    // redTemp_start();
+    redTemp_start();
     // wifiConnect_init();
     // ens210_temp_info();
     // ens160_info();
+    // rgbLed_work();
 }

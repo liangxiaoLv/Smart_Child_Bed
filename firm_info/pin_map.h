@@ -107,6 +107,7 @@
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
+#define RADAR_RX_BUF_SIZE   2048            /* 雷达 UART RX 缓冲区 */
 
 /* ═══════════════════════════════════════════════════════════════
  * 红外体温传感器 — UART1
@@ -116,6 +117,7 @@
 #define RED_RX_PIN          GPIO_NUM_5      /* 红外 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RED_TX_PIN          GPIO_NUM_4      /* 红外 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RED_BAUD_RATE       115200          /* 红外串口波特率 */
+#define RED_RX_BUF_SIZE     20480           /* 红外 UART RX 缓冲区（一帧 10256B） */
 
 /* ═══════════════════════════════════════════════════════════════
  * ENS210温度传感器 — I2C1（重映射）
@@ -132,3 +134,11 @@
 #define ENS160_SDA_PIN      GPIO_NUM_17     /* ENS160 I2C 数据线 */
 #define ENS160_SCL_PIN      GPIO_NUM_18     /* ENS160 I2C 时钟线 */
 #define ENS160_I2C_ADDR     0x52            /* ENS160 7-bit I2C 设备地址（MISO/ADDR 低电平） */
+
+/* ═══════════════════════════════════════════════════════════════
+ * WS2812 RGB 灯带 — RMT
+ * 数据线 GPIO 9，与 LCD_G3 复用
+ * ═══════════════════════════════════════════════════════════════ */
+#define WS2812_DATA_PIN     GPIO_NUM_9      /* WS2812 数据线 */
+#define WS2812_LED_NUM      15              /* 灯带 LED 数量 */
+#define WS2812_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */

@@ -241,7 +241,8 @@ static void mmWaveConsoleTask(void *arg)
 esp_err_t mm_wave_radar_info(void)
 {
     esp_err_t ret = uartDriver_init(RADAR_UART_NUM, RADAR_TX_PIN,
-                                    RADAR_RX_PIN, RADAR_BAUD_RATE);
+                                    RADAR_RX_PIN, RADAR_BAUD_RATE,
+                                    RADAR_RX_BUF_SIZE);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "毫米波雷达 UART 初始化失败");
         return ret;
