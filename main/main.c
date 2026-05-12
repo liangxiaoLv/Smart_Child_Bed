@@ -1,7 +1,8 @@
 // #include "wifi_connect.h"
 // #include "red_temp.h"
 // #include "mm_wave.h"
-#include "ens210.h"
+// #include "ens210.h"
+// #include "ens160.h"
 
 void app_main(void)
 {
@@ -9,4 +10,5 @@ void app_main(void)
     // redTemp_start();
     // wifiConnect_init();
     // ens210_temp_info();
+    // ens160_info();
 }

@@ -124,3 +124,11 @@
 #define ENS210_SDA_PIN      GPIO_NUM_17     /* ENS210 I2C 数据线 */
 #define ENS210_SCL_PIN      GPIO_NUM_18     /* ENS210 I2C 时钟线 */
 #define ENS210_I2C_ADDR     0x43            /* ENS210 7-bit I2C 设备地址 */
+
+/* ═══════════════════════════════════════════════════════════════
+ * ENS160气体传感器 — I2C1（重映射）
+ * SDA/SCL 使用 GPIO 17/18，与 LCD 数据线 B3/G7 复用
+ * ═══════════════════════════════════════════════════════════════ */
+#define ENS160_SDA_PIN      GPIO_NUM_17     /* ENS160 I2C 数据线 */
+#define ENS160_SCL_PIN      GPIO_NUM_18     /* ENS160 I2C 时钟线 */
+#define ENS160_I2C_ADDR     0x52            /* ENS160 7-bit I2C 设备地址（MISO/ADDR 低电平） */
