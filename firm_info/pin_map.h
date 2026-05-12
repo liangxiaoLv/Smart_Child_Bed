@@ -30,10 +30,12 @@
 /* ═══════════════════════════════════════════════════════════════
  * I2C1 — 光/温湿度/气体传感器
  * 注意：GPIO 4/5 与 LCD 控制线、毫米波雷达 UART 复用
+ * 重映射：ENS210 使用时将 I2C1 映射到 GPIO 17/18
  * ═══════════════════════════════════════════════════════════════ */
 #define I2C1_PORT_NUM       1               /* I2C 端口号，对应 I2C_NUM_1 */
 #define I2C1_SDA_PIN        GPIO_NUM_5      /* I2C1 数据线，与 LCD_PCLK / RADAR_RX 复用 */
 #define I2C1_SCL_PIN        GPIO_NUM_4      /* I2C1 时钟线，与 LCD_DE / RADAR_TX 复用 */
+#define I2C1_SPEED_HZ       100000          /* I2C1 总线速率 100 kHz */
 
 /* ═══════════════════════════════════════════════════════════════
  * SPI2 — LCD 数据总线（或预留）
@@ -105,6 +107,7 @@
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
+
 /* ═══════════════════════════════════════════════════════════════
  * 红外体温传感器 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
@@ -113,3 +116,11 @@
 #define RED_RX_PIN          GPIO_NUM_5      /* 红外 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RED_TX_PIN          GPIO_NUM_4      /* 红外 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RED_BAUD_RATE       115200          /* 红外串口波特率 */
+
+/* ═══════════════════════════════════════════════════════════════
+ * ENS210温度传感器 — I2C1（重映射）
+ * SDA/SCL 使用 GPIO 17/18，与 LCD 数据线 B3/G7 复用
+ * ═══════════════════════════════════════════════════════════════ */
+#define ENS210_SDA_PIN      GPIO_NUM_17     /* ENS210 I2C 数据线 */
+#define ENS210_SCL_PIN      GPIO_NUM_18     /* ENS210 I2C 时钟线 */
+#define ENS210_I2C_ADDR     0x43            /* ENS210 7-bit I2C 设备地址 */
