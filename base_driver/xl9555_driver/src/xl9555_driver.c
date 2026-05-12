@@ -27,6 +27,10 @@ static esp_err_t readReg(uint8_t reg, uint8_t *val)
 
 esp_err_t xl9555Driver_init(void)
 {
+    static bool s_inited = false;
+    if (s_inited) return ESP_OK;
+    s_inited = true;
+
     ESP_RETURN_ON_ERROR(
         i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &s_bus),
         TAG, "I2C0 总线初始化失败");
