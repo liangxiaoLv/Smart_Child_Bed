@@ -6,6 +6,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include <math.h>
+#include <string.h>
 
 #define DEBOUNCE_MS         30
 #define BREATH_PERIOD_MS    3000
@@ -23,6 +24,7 @@ typedef enum {
 } rgbState_t;
 
 static rgbState_t s_state = RGB_OFF;
+static float s_brightness = 1.0f;  /* 0.0 ~ 1.0，由外部 API 设置 */
 
 static bool keyEdge(xl9555_port_t port, uint8_t mask)
 {
@@ -46,7 +48,10 @@ static bool keyEdge(xl9555_port_t port, uint8_t mask)
 
 static void fillColor(uint8_t r, uint8_t g, uint8_t b)
 {
-    ws2812Driver_setAll(r, g, b);
+    uint8_t _r = (uint8_t)((float)r * s_brightness);
+    uint8_t _g = (uint8_t)((float)g * s_brightness);
+    uint8_t _b = (uint8_t)((float)b * s_brightness);
+    ws2812Driver_setAll(_r, _g, _b);
     ws2812Driver_flush();
 }
 
@@ -162,5 +167,45 @@ esp_err_t rgbLed_work(void)
 
     xTaskCreate(rgbLedTask, "rgb_led", 3072, NULL, 2, NULL);
     ESP_LOGI(TAG, "RGB 灯带任务已启动");
+    return ESP_OK;
+}
+
+esp_err_t rgbLed_setOnOff(bool on)
+{
+    if (on) {
+        s_state = RGB_SOLID;
+        ESP_LOGI(TAG, "外部指令 → 开灯（常亮）");
+    } else {
+        s_state = RGB_OFF;
+        fillColor(0, 0, 0);
+        ESP_LOGI(TAG, "外部指令 → 关灯");
+    }
+    return ESP_OK;
+}
+
+esp_err_t rgbLed_setMode(const char *mode)
+{
+    if (strcmp(mode, "solid") == 0) {
+        s_state = RGB_SOLID;
+        ESP_LOGI(TAG, "外部指令 → 常亮");
+    } else if (strcmp(mode, "breath") == 0) {
+        s_state = RGB_BREATHING;
+        ESP_LOGI(TAG, "外部指令 → 呼吸灯");
+    } else if (strcmp(mode, "rainbow") == 0) {
+        s_state = RGB_CYCLE;
+        ESP_LOGI(TAG, "外部指令 → 彩虹");
+    } else {
+        ESP_LOGW(TAG, "未知模式: %s", mode);
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_OK;
+}
+
+esp_err_t rgbLed_setBrightness(uint8_t pct)
+{
+    if (pct < 10) pct = 10;
+    if (pct > 100) pct = 100;
+    s_brightness = (float)pct / 100.0f;
+    ESP_LOGI(TAG, "外部指令 → 亮度 %d%%", pct);
     return ESP_OK;
 }

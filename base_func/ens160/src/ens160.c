@@ -1,6 +1,7 @@
 #include "ens160.h"
 #include "pin_map.h"
 #include "i2c_driver.h"
+#include "trans_2_cloud.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -115,6 +116,9 @@ static void ens160Task(void *arg)
         ESP_LOGI(TAG, "AQI:%d(%s) TVOC:%d ppb eCO2:%d ppm T:%.1f°C RH:%.1f%% [%s]",
                  aqi, aqiLabel(aqi), tvoc_ppb, eco2_ppm, t_c, rh,
                  validityLabel(validity));
+
+        /* 同步到云端上报模块 */
+        trans2cloud_updateAir(aqi, tvoc_ppb, eco2_ppm);
 
         vTaskDelay(pdMS_TO_TICKS(2000));
     }

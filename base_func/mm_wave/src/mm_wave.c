@@ -1,6 +1,7 @@
 #include "mm_wave.h"
 #include "pin_map.h"
 #include "uart_driver.h"
+#include "trans_2_cloud.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -55,6 +56,8 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
             const char *move  = data[3] ? "发生体动" : "未发生体动";
             ESP_LOGI(TAG, "生命体征: %s | 呼吸率 %d | 心率 %d | %s",
                      person, data[1], data[2], move);
+            /* 同步到云端上报模块 */
+            trans2cloud_updateRadar(data[0] != 0, data[1], data[2], data[3] != 0);
         }
         break;
 

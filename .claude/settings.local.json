@@ -41,7 +41,10 @@
       "Bash(xargs cat)",
       "PowerShell(Get-Item *)",
       "Bash(nm /e/Smart_Child_Bed/build/esp-idf/bt/libbt.a)",
-      "Bash(nm /e/Smart_Child_Bed/build/esp-idf/bt/CMakeFiles/__idf_bt.dir/host/bluedroid/api/esp_gap_ble_api.c.obj)"
+      "Bash(nm /e/Smart_Child_Bed/build/esp-idf/bt/CMakeFiles/__idf_bt.dir/host/bluedroid/api/esp_gap_ble_api.c.obj)",
+      "PowerShell(Write-Output $env:USERPROFILE)",
+      "Bash(nslookup liangxiaolv.me)",
+      "Bash(Resolve-DnsName liangxiaolv.me)"
     ]
   }
 }

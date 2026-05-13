@@ -1,6 +1,8 @@
 #include "ens210.h"
+#include "ens160.h"
 #include "pin_map.h"
 #include "i2c_driver.h"
+#include "trans_2_cloud.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -87,6 +89,13 @@ static void ens210Task(void *arg)
 
         ESP_LOGI(TAG, "温度: %.2f °C (valid=%d crc=%d)  湿度: %.2f %% (valid=%d crc=%d)",
                  temp_c, t_valid, t_crc_ok, hum, h_valid, h_crc_ok);
+
+        /* ENS160 温湿度补偿 */
+        ens160_set_temp(temp_c);
+        ens160_set_rh(hum);
+
+        /* 同步到云端上报模块 */
+        trans2cloud_updateEnv(temp_c, hum);
 
         vTaskDelay(pdMS_TO_TICKS(2000));
     }

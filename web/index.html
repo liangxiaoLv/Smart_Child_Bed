@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能儿童床</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 顶部状态栏 -->
+    <header>
+        <h1>智能儿童床</h1>
+        <div id="status-bar">
+            <span id="online-dot" class="dot offline"></span>
+            <span id="online-text">未连接</span>
+            <span class="sep">|</span>
+            <span id="wifi-ssid">--</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- 左侧：传感器数据 -->
+        <section class="panel data-panel">
+            <h2>传感器数据</h2>
+            <div class="data-grid">
+                <div class="data-item">
+                    <span class="label">毫米波雷达</span>
+                    <span class="value" id="val-presence">--</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">环境温度</span>
+                    <span class="value" id="val-env-temp">-- °C</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">环境湿度</span>
+                    <span class="value" id="val-env-hum">-- %</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">空气质量</span>
+                    <span class="value" id="val-aqi">--</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">TVOC</span>
+                    <span class="value" id="val-tvoc">-- ppb</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">eCO2</span>
+                    <span class="value" id="val-eco2">-- ppm</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">呼吸率</span>
+                    <span class="value" id="val-breath">-- 次/分</span>
+                </div>
+                <div class="data-item">
+                    <span class="label">心率</span>
+                    <span class="value" id="val-heart">-- bpm</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧：控制面板 -->
+        <section class="panel ctrl-panel">
+            <h2>灯带控制</h2>
+            <div class="ctrl-group">
+                <button class="ctrl-btn on" id="btn-led-on">开灯</button>
+                <button class="ctrl-btn off" id="btn-led-off">关灯</button>
+            </div>
+            <div class="ctrl-group">
+                <button class="ctrl-btn mode" data-mode="rainbow">彩虹</button>
+                <button class="ctrl-btn mode" data-mode="breath">呼吸</button>
+                <button class="ctrl-btn mode" data-mode="solid">常亮</button>
+            </div>
+            <div class="ctrl-group">
+                <label>亮度: <span id="val-brightness">80</span>%</label>
+                <input type="range" id="slider-brightness" min="10" max="100" value="80">
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部：消息日志 -->
+    <section class="log-panel">
+        <h3>消息日志</h3>
+        <div id="log-list"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
