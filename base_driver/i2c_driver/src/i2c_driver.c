@@ -3,11 +3,20 @@
 
 static const char *TAG = "i2c_driver";
 
+#define I2C_MAX_PORT 2
+static i2c_master_bus_handle_t s_bus[I2C_MAX_PORT];
+
 esp_err_t i2cDriver_initBus(int port,
                              int sda,
                              int scl,
                              i2c_master_bus_handle_t *bus_out)
 {
+    if (port < I2C_MAX_PORT && s_bus[port]) {
+        ESP_LOGI(TAG, "I2C%d 总线已存在，复用句柄", port);
+        *bus_out = s_bus[port];
+        return ESP_OK;
+    }
+
     i2c_master_bus_config_t cfg = {
         .i2c_port          = port,
         .sda_io_num        = sda,
@@ -19,8 +28,11 @@ esp_err_t i2cDriver_initBus(int port,
     esp_err_t ret = i2c_new_master_bus(&cfg, bus_out);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2C%d 总线初始化失败: %s", port, esp_err_to_name(ret));
+        return ret;
     }
-    return ret;
+
+    if (port < I2C_MAX_PORT) s_bus[port] = *bus_out;
+    return ESP_OK;
 }
 
 esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
