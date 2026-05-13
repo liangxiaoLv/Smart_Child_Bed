@@ -87,10 +87,12 @@ static int s_retry = 0;
 
 static void getDeviceServiceName(char *name, size_t max)
 {
-    uint8_t mac[6];
-    esp_read_mac(mac, ESP_MAC_WIFI_STA);
-    snprintf(name, max, "%s%02X%02X%02X",
-             PROV_SERVICE_PREFIX, mac[3], mac[4], mac[5]);
+    // uint8_t mac[6];
+    // esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    // snprintf(name, max, "%s%02X%02X%02X",
+    //          PROV_SERVICE_PREFIX, mac[3], mac[4], mac[5]);
+    snprintf(name, max, "%s%s",
+             PROV_SERVICE_PREFIX, "yinta_bed");
 }
 
 /* ─── 事件处理 ─────────────────────────────────────────────── */
@@ -169,7 +171,17 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
-        ESP_LOGI(TAG, "获取 IP: " IPSTR, IP2STR(&ev->ip_info.ip));
+
+        wifi_config_t wifi_cfg;
+        esp_wifi_get_config(WIFI_IF_STA, &wifi_cfg);
+
+        ESP_LOGI(TAG, "══════ WiFi 已连接 ══════");
+        ESP_LOGI(TAG, "  SSID:    %s", wifi_cfg.sta.ssid);
+        ESP_LOGI(TAG, "  IP:      " IPSTR, IP2STR(&ev->ip_info.ip));
+        ESP_LOGI(TAG, "  掩码:    " IPSTR, IP2STR(&ev->ip_info.netmask));
+        ESP_LOGI(TAG, "  网关:    " IPSTR, IP2STR(&ev->ip_info.gw));
+        ESP_LOGI(TAG, "══════════════════════════");
+
         s_retry = 0;
         xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
     }

@@ -116,7 +116,7 @@
 #define RED_UART_NUM        1               /* 红外使用 UART1 */
 #define RED_RX_PIN          GPIO_NUM_5      /* 红外 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RED_TX_PIN          GPIO_NUM_4      /* 红外 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
-#define RED_BAUD_RATE       115200          /* 红外串口波特率 */
+#define RED_BAUD_RATE       921600          /* 红外串口波特率 */
 #define RED_RX_BUF_SIZE     20480           /* 红外 UART RX 缓冲区（一帧 10256B） */
 
 /* ═══════════════════════════════════════════════════════════════
@@ -137,8 +137,8 @@
 
 /* ═══════════════════════════════════════════════════════════════
  * WS2812 RGB 灯带 — RMT
- * 数据线 GPIO 9，与 LCD_G3 复用
+ * 数据线 GPIO 45
  * ═══════════════════════════════════════════════════════════════ */
-#define WS2812_DATA_PIN     GPIO_NUM_9      /* WS2812 数据线 */
+#define WS2812_DATA_PIN     GPIO_NUM_45      /* WS2812 数据线 */
 #define WS2812_LED_NUM      15              /* 灯带 LED 数量 */
 #define WS2812_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */

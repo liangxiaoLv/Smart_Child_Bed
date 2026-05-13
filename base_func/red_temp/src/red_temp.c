@@ -104,10 +104,13 @@ static void redTempTask(void *arg)
     for (;;) {
         int n = uartDriver_read(RED_UART_NUM, buf + bufLen,
                                 FRAME_LEN * 2 - bufLen, 500);
-        if (n <= 0) {
-            vTaskDelay(pdMS_TO_TICKS(100));
+        if (n < 0) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
+        if (n == 0)
+            continue;
+
         bufLen += n;
 
         int hdrPos = findHeader(buf, bufLen);
@@ -123,9 +126,7 @@ static void redTempTask(void *arg)
         if (bufLen - hdrPos < FRAME_LEN)
             continue;
 
-        // verify tail
         if (memcmp(buf + hdrPos + FRAME_LEN - TAIL_LEN, TAIL, TAIL_LEN) != 0) {
-            ESP_LOGW(TAG, "帧尾不匹配，重新同步");
             int skip = hdrPos + 1;
             memmove(buf, buf + skip, bufLen - skip);
             bufLen -= skip;
