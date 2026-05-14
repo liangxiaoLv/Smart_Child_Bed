@@ -11,4 +11,5 @@ idf_component_register(
         network_provisioning
         bt
         protocomm
+        trans_2_cloud
 )

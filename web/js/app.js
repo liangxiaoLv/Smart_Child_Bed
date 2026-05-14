@@ -1,23 +1,19 @@
 /* ─── 服务器配置 ──────────────────────────────────── */
 const WS_URL  = 'ws://60.205.235.150:9001';
-const MQTT_USER = 'childbe';
-const MQTT_PASS = 'Yinta';
 
-/* ─── MQTT 话题 ───────────────────────────────────────── */
+/* ─── MQTT 话题 ──────────────────────────────────── */
 const TOPIC_STATUS    = 'bed/status';
 const TOPIC_HEARTBEAT = 'bed/heartbeat';
 const TOPIC_CONTROL   = 'bed/control';
 
-/* ─── DOM 引用 ────────────────────────────────────────── */
-const $dot       = document.getElementById('online-dot');
-const $onlineTxt = document.getElementById('online-text');
-const $wifiSsid  = document.getElementById('wifi-ssid');
-const $logList   = document.getElementById('log-list');
+/* ─── DOM 引用 ───────────────────────────────────── */
+const $dot        = document.getElementById('online-dot');
+const $wifiLabel  = document.getElementById('wifi-label');
+const $logList    = document.getElementById('log-list');
+const $clock      = document.getElementById('clock');
+const $modeBtns   = document.querySelectorAll('.btn-mode');
 
-/* ─── 数据元素映射 ────────────────────────────────────── */
-const valIds = ['presence', 'env-temp', 'env-hum', 'aqi', 'tvoc', 'eco2', 'breath', 'heart'];
-
-/* ─── MQTT 连接（通过 WebSocket 桥接）────────────────── */
+/* ─── MQTT 连接（通过 WebSocket 桥接）────────────── */
 let ws = null;
 let heartbeatTimer = null;
 
@@ -43,20 +39,17 @@ function connect() {
         try {
             const data = JSON.parse(evt.data);
             handleMessage(data.topic, data.payload);
-        } catch (e) {
-            // 非 JSON 消息，忽略
-        }
+        } catch (e) {}
     };
 }
 
-/* ─── 消息处理 ────────────────────────────────────────── */
+/* ─── 消息处理 ──────────────────────────────────── */
 function handleMessage(topic, payload) {
     addLog(topic, payload);
 
     if (topic === TOPIC_STATUS) {
         try {
-            const d = JSON.parse(payload);
-            updateDisplay(d);
+            updateDisplay(JSON.parse(payload));
         } catch (e) {}
     } else if (topic === TOPIC_HEARTBEAT) {
         resetHeartbeat();
@@ -64,8 +57,7 @@ function handleMessage(topic, payload) {
 }
 
 function aqiText(aqi) {
-    const map = {1:'优', 2:'良', 3:'中等', 4:'差', 5:'劣'};
-    return map[aqi] || '--';
+    return {1:'优', 2:'良', 3:'中等', 4:'差', 5:'劣'}[aqi] || '--';
 }
 
 function updateDisplay(d) {
@@ -77,10 +69,15 @@ function updateDisplay(d) {
     setVal('eco2',     d.eco2,      'ppm');
     setVal('breath',   d.breath,    '次/分');
     setVal('heart',    d.heart,     'bpm');
+
+    /* WiFi SSID 更新 */
+    if (d.ssid) {
+        $wifiLabel.textContent = d.ssid;
+    }
 }
 
 function setVal(id, val, unit) {
-    const el = document.getElementById('val-' + id);
+    var el = document.getElementById('val-' + id);
     if (!el) return;
     if (val === undefined || val === null) {
         el.textContent = '-- ' + unit;
@@ -89,53 +86,74 @@ function setVal(id, val, unit) {
     }
 }
 
-/* ─── 发送控制指令 ────────────────────────────────────── */
+/* ─── 发送控制指令 ──────────────────────────────── */
 function sendCommand(cmd, value) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         addLog('system', '未连接，无法发送指令');
         return;
     }
-    const payload = JSON.stringify({ cmd: cmd, value: value });
+    var payload = JSON.stringify({ cmd: cmd, value: value });
     ws.send(JSON.stringify({ topic: TOPIC_CONTROL, payload: payload }));
     addLog(TOPIC_CONTROL, payload);
 }
 
-/* ─── 在线状态管理 ────────────────────────────────────── */
+/* ─── 在线状态管理 ──────────────────────────────── */
 function setOnline(on) {
     $dot.className = 'dot ' + (on ? 'online' : 'offline');
-    $onlineTxt.textContent = on ? '已连接' : '未连接';
+    if (!on) {
+        $wifiLabel.textContent = '未连接';
+    }
 }
 
 function resetHeartbeat() {
     setOnline(true);
     if (heartbeatTimer) clearTimeout(heartbeatTimer);
-    heartbeatTimer = setTimeout(() => setOnline(false), 15000);
+    heartbeatTimer = setTimeout(function() { setOnline(false); }, 15000);
 }
 
-/* ─── 日志 ────────────────────────────────────────────── */
+/* ─── 实时时钟 ──────────────────────────────────── */
+function updateClock() {
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2, '0');
+    var m = String(now.getMinutes()).padStart(2, '0');
+    var s = String(now.getSeconds()).padStart(2, '0');
+    $clock.textContent = h + ':' + m + ':' + s;
+}
+
+/* ─── 日志 ──────────────────────────────────────── */
 function addLog(topic, msg) {
-    const div = document.createElement('div');
-    const now = new Date();
-    const ts = now.toTimeString().slice(0, 8);
+    var div = document.createElement('div');
+    var now = new Date();
+    var ts = now.toTimeString().slice(0, 8);
     div.innerHTML = '<span class="time">' + ts + '</span>' +
                     '<span class="topic">[' + topic + ']</span>' + msg;
     $logList.prepend(div);
     if ($logList.children.length > 50) $logList.lastChild.remove();
 }
 
-/* ─── 按钮绑定 ────────────────────────────────────────── */
-document.getElementById('btn-led-on').onclick  = () => sendCommand('led_onoff', 1);
-document.getElementById('btn-led-off').onclick = () => sendCommand('led_onoff', 0);
+/* ─── 按钮绑定 ──────────────────────────────────── */
+document.getElementById('btn-led-on').onclick  = function() { sendCommand('led_onoff', 1); };
+document.getElementById('btn-led-off').onclick = function() { sendCommand('led_onoff', 0); };
 
-document.querySelectorAll('.ctrl-btn.mode').forEach(btn => {
-    btn.onclick = () => sendCommand('led_mode', btn.dataset.mode);
+$modeBtns.forEach(function(btn) {
+    btn.onclick = function() {
+        $modeBtns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        sendCommand('led_mode', btn.dataset.mode);
+    };
 });
 
-const slider = document.getElementById('slider-brightness');
-slider.oninput = () => {
-    document.getElementById('val-brightness').textContent = slider.value;
+var slider = document.getElementById('slider-brightness');
+slider.oninput = function() {
+    document.getElementById('val-brightness').textContent = slider.value + '%';
 };
-slider.onchange = () => sendCommand('led_brightness', parseInt(slider.value));
+slider.onchange = function() { sendCommand('led_brightness', parseInt(slider.value)); };
 
-/* ─── 启动 ────────────────────────────────────────────── */
+document.getElementById('btn-clear-log').onclick = function() {
+    $logList.innerHTML = '';
+};
+
+/* ─── 启动 ──────────────────────────────────────── */
+updateClock();
+setInterval(updateClock, 1000);
 connect();

@@ -23,6 +23,7 @@ static bool    s_presence = false;
 static uint8_t s_breath   = 0;
 static uint8_t s_heart    = 0;
 static bool    s_move     = false;
+static char    s_ssid[33] = "";
 
 /* ─── 云端话题 ─────────────────────────────────────────────── */
 #define TOPIC_STATUS    "bed/status"
@@ -34,9 +35,11 @@ static void reportTask(void *arg)
     char json[512];
     for (;;) {
         snprintf(json, sizeof(json),
-            "{\"env_temp\":%.1f,\"env_hum\":%.1f,"
+            "{\"ssid\":\"%s\","
+            "\"env_temp\":%.1f,\"env_hum\":%.1f,"
             "\"aqi\":%d,\"tvoc\":%d,\"eco2\":%d,"
             "\"presence\":%d,\"breath\":%d,\"heart\":%d,\"move\":%d}",
+            s_ssid,
             s_env_temp, s_env_hum,
             s_aqi, s_tvoc, s_eco2,
             s_presence, s_breath, s_heart, s_move);
@@ -77,6 +80,14 @@ void trans2cloud_updateRadar(bool presence, uint8_t breath, uint8_t heart, bool 
     s_breath   = breath;
     s_heart    = heart;
     s_move     = move;
+}
+
+void trans2cloud_updateWifiSSID(const char *ssid)
+{
+    if (ssid) {
+        strncpy(s_ssid, ssid, sizeof(s_ssid) - 1);
+        s_ssid[sizeof(s_ssid) - 1] = '\0';
+    }
 }
 
 /* ─── 云端指令处理 ────────────────────────────────────────── */

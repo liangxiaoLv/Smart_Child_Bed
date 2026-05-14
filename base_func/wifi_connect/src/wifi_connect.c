@@ -13,6 +13,7 @@
 
 #include "wifi_connect.h"
 #include "xl9555_driver.h"
+#include "trans_2_cloud.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -181,6 +182,8 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
         ESP_LOGI(TAG, "  掩码:    " IPSTR, IP2STR(&ev->ip_info.netmask));
         ESP_LOGI(TAG, "  网关:    " IPSTR, IP2STR(&ev->ip_info.gw));
         ESP_LOGI(TAG, "══════════════════════════");
+
+        trans2cloud_updateWifiSSID((const char *)wifi_cfg.sta.ssid);
 
         s_retry = 0;
         xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);

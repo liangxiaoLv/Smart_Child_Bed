@@ -8,3 +8,4 @@ esp_err_t trans2cloud_start(void);
 void trans2cloud_updateEnv(float temp_c, float hum_pct);
 void trans2cloud_updateAir(uint8_t aqi, uint16_t tvoc_ppb, uint16_t eco2_ppm);
 void trans2cloud_updateRadar(bool presence, uint8_t breath, uint8_t heart, bool move);
+void trans2cloud_updateWifiSSID(const char *ssid);

@@ -7,79 +7,107 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- 顶部状态栏 -->
     <header>
-        <h1>智能儿童床</h1>
-        <div id="status-bar">
-            <span id="online-dot" class="dot offline"></span>
-            <span id="online-text">未连接</span>
-            <span class="sep">|</span>
-            <span id="wifi-ssid">--</span>
+        <div class="brand">
+            <span class="logo-icon">&#9737;</span>
+            <h1>智能儿童床</h1>
+        </div>
+        <div class="header-right">
+            <div id="clock" class="clock">--:--:--</div>
+            <div id="wifi-status" class="wifi-badge">
+                <span id="online-dot" class="dot offline"></span>
+                <span id="wifi-label">未连接</span>
+            </div>
         </div>
     </header>
 
     <main>
-        <!-- 左侧：传感器数据 -->
-        <section class="panel data-panel">
-            <h2>传感器数据</h2>
-            <div class="data-grid">
-                <div class="data-item">
-                    <span class="label">毫米波雷达</span>
-                    <span class="value" id="val-presence">--</span>
+        <section class="panel sensor-panel">
+            <h2><span class="icon">&#8996;</span> 传感器数据</h2>
+            <div class="sensor-grid">
+                <div class="card">
+                    <div class="card-icon presence">&#9788;</div>
+                    <div class="card-info">
+                        <span class="card-label">人体感应</span>
+                        <span class="card-value" id="val-presence">--</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">环境温度</span>
-                    <span class="value" id="val-env-temp">-- °C</span>
+                <div class="card">
+                    <div class="card-icon temp">&#9730;</div>
+                    <div class="card-info">
+                        <span class="card-label">环境温度</span>
+                        <span class="card-value" id="val-env-temp">-- °C</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">环境湿度</span>
-                    <span class="value" id="val-env-hum">-- %</span>
+                <div class="card">
+                    <div class="card-icon hum">&#9727;</div>
+                    <div class="card-info">
+                        <span class="card-label">环境湿度</span>
+                        <span class="card-value" id="val-env-hum">-- %</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">空气质量</span>
-                    <span class="value" id="val-aqi">--</span>
+                <div class="card">
+                    <div class="card-icon aqi">&#9925;</div>
+                    <div class="card-info">
+                        <span class="card-label">空气质量</span>
+                        <span class="card-value" id="val-aqi">--</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">TVOC</span>
-                    <span class="value" id="val-tvoc">-- ppb</span>
+                <div class="card">
+                    <div class="card-icon">&#9832;</div>
+                    <div class="card-info">
+                        <span class="card-label">TVOC</span>
+                        <span class="card-value" id="val-tvoc">-- ppb</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">eCO2</span>
-                    <span class="value" id="val-eco2">-- ppm</span>
+                <div class="card">
+                    <div class="card-icon eco2">&#9729;</div>
+                    <div class="card-info">
+                        <span class="card-label">eCO₂</span>
+                        <span class="card-value" id="val-eco2">-- ppm</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">呼吸率</span>
-                    <span class="value" id="val-breath">-- 次/分</span>
+                <div class="card">
+                    <div class="card-icon breath">&#9832;</div>
+                    <div class="card-info">
+                        <span class="card-label">呼吸率</span>
+                        <span class="card-value" id="val-breath">-- 次/分</span>
+                    </div>
                 </div>
-                <div class="data-item">
-                    <span class="label">心率</span>
-                    <span class="value" id="val-heart">-- bpm</span>
+                <div class="card">
+                    <div class="card-icon heart">&#9829;</div>
+                    <div class="card-info">
+                        <span class="card-label">心率</span>
+                        <span class="card-value" id="val-heart">-- bpm</span>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 右侧：控制面板 -->
         <section class="panel ctrl-panel">
-            <h2>灯带控制</h2>
-            <div class="ctrl-group">
-                <button class="ctrl-btn on" id="btn-led-on">开灯</button>
-                <button class="ctrl-btn off" id="btn-led-off">关灯</button>
+            <h2><span class="icon">&#9788;</span> 灯带控制</h2>
+            <div class="ctrl-row">
+                <button class="btn btn-on" id="btn-led-on">开灯</button>
+                <button class="btn btn-off" id="btn-led-off">关灯</button>
             </div>
-            <div class="ctrl-group">
-                <button class="ctrl-btn mode" data-mode="rainbow">彩虹</button>
-                <button class="ctrl-btn mode" data-mode="breath">呼吸</button>
-                <button class="ctrl-btn mode" data-mode="solid">常亮</button>
+            <div class="ctrl-row">
+                <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
+                <button class="btn btn-mode" data-mode="breath">呼吸</button>
+                <button class="btn btn-mode" data-mode="solid">常亮</button>
             </div>
-            <div class="ctrl-group">
-                <label>亮度: <span id="val-brightness">80</span>%</label>
+            <div class="brightness-ctrl">
+                <span class="ctrl-label">亮度</span>
                 <input type="range" id="slider-brightness" min="10" max="100" value="80">
+                <span id="val-brightness" class="brightness-val">80%</span>
             </div>
         </section>
     </main>
 
-    <!-- 底部：消息日志 -->
     <section class="log-panel">
-        <h3>消息日志</h3>
+        <div class="log-header">
+            <h3>消息日志</h3>
+            <button class="btn-clear" id="btn-clear-log">清空</button>
+        </div>
         <div id="log-list"></div>
     </section>
 
