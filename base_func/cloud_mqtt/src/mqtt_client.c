@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include <string.h>
+#include <stdlib.h>
 
 /* ─── 服务器配置（根据实际情况修改）────────────────────────── */
 #define MQTT_BROKER_URI  "mqtt://60.205.235.150:1883"
@@ -12,10 +13,11 @@
 #define MQTT_PASSWORD    "Yinta"
 
 /* ─── 本地话题 ────────────────────────────────────────────── */
-#define TOPIC_CONTROL    "bed/control"
-#define TOPIC_STATUS     "bed/status"
-#define TOPIC_HEARTBEAT  "bed/heartbeat"
-#define TOPIC_KEY        "bed/key"
+#define TOPIC_CONTROL      "bed/control"
+#define TOPIC_STATUS       "bed/status"
+#define TOPIC_HEARTBEAT    "bed/heartbeat"
+#define TOPIC_AUDIO_START  "bed/audio_start"
+#define TOPIC_AUDIO        "bed/audio"
 
 #define MQTT_QOS         1
 
@@ -24,6 +26,16 @@ static const char *TAG = "mqtt";
 /* ─── 模块状态 ────────────────────────────────────────────── */
 static esp_mqtt_client_handle_t s_client = NULL;
 static void (*s_cmd_cb)(const char *topic, const char *payload);
+static void (*s_audio_start_cb)(const char *name, size_t total_size);
+static void (*s_audio_chunk_cb)(const uint8_t *data, size_t len);
+
+/* ─── 话题匹配 ────────────────────────────────────────────── */
+static bool topicMatch(const char *topic, int topic_len, const char *expected)
+{
+    size_t elen = strlen(expected);
+    if ((size_t)topic_len != elen) return false;
+    return memcmp(topic, expected, elen) == 0;
+}
 
 /* ─── MQTT 事件处理 ───────────────────────────────────────── */
 static void mqttEventHandler(void *arg, esp_event_base_t base,
@@ -35,28 +47,66 @@ static void mqttEventHandler(void *arg, esp_event_base_t base,
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT 已连接 Broker");
         esp_mqtt_client_subscribe(s_client, TOPIC_CONTROL, MQTT_QOS);
-        ESP_LOGI(TAG, "已订阅: %s", TOPIC_CONTROL);
+        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO_START, MQTT_QOS);
+        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO, MQTT_QOS);
+        ESP_LOGI(TAG, "已订阅: %s, %s, %s", TOPIC_CONTROL, TOPIC_AUDIO_START, TOPIC_AUDIO);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGW(TAG, "MQTT 断开，自动重连中...");
         break;
 
-    case MQTT_EVENT_DATA: {
-        char topic[ev->topic_len + 1];
-        char payload[ev->data_len + 1];
-        memcpy(topic, ev->topic, ev->topic_len);
-        topic[ev->topic_len] = '\0';
-        memcpy(payload, ev->data, ev->data_len);
-        payload[ev->data_len] = '\0';
+    case MQTT_EVENT_DATA:
+        /* bed/audio — 原始二进制，直接传指针不复制 */
+        if (topicMatch(ev->topic, ev->topic_len, TOPIC_AUDIO)) {
+            if (s_audio_chunk_cb) {
+                s_audio_chunk_cb((const uint8_t *)ev->data, ev->data_len);
+            }
+            break;
+        }
 
-        ESP_LOGI(TAG, "收到 [%s]: %s", topic, payload);
+        /* 其余话题 — 文本，复制为 C 字符串 */
+        {
+            char topic[ev->topic_len + 1];
+            char *payload = malloc(ev->data_len + 1);
+            if (!payload) break;
+            memcpy(topic, ev->topic, ev->topic_len);
+            topic[ev->topic_len] = '\0';
+            memcpy(payload, ev->data, ev->data_len);
+            payload[ev->data_len] = '\0';
 
-        if (strcmp(topic, TOPIC_CONTROL) == 0 && s_cmd_cb) {
-            s_cmd_cb(topic, payload);
+            ESP_LOGI(TAG, "收到 [%s]: %s", topic, payload);
+
+            if (strcmp(topic, TOPIC_AUDIO_START) == 0 && s_audio_start_cb) {
+                /* 解析 {"name":"...", "size":N} — 兼容带空格 */
+                char name[128] = {0};
+                size_t fsize = 0;
+                const char *p = strstr(payload, "\"name\"");
+                if (p) {
+                    p = strchr(p, ':');
+                    if (p) {
+                        p = strchr(p, '"');
+                        if (p) {
+                            p++;
+                            int i = 0;
+                            while (*p && *p != '"' && i < (int)sizeof(name) - 1)
+                                name[i++] = *p++;
+                        }
+                    }
+                }
+                p = strstr(payload, "\"size\"");
+                if (p) {
+                    p = strchr(p, ':');
+                    if (p) fsize = (size_t)atol(p + 1);
+                }
+                s_audio_start_cb(name, fsize);
+            } else if (strcmp(topic, TOPIC_CONTROL) == 0 && s_cmd_cb) {
+                s_cmd_cb(topic, payload);
+            }
+
+            free(payload);
         }
         break;
-    }
 
     case MQTT_EVENT_ERROR:
         ESP_LOGE(TAG, "MQTT 错误");
@@ -93,6 +143,7 @@ esp_err_t mqttClient_start(void)
         .credentials.username = MQTT_USERNAME,
         .credentials.authentication.password = MQTT_PASSWORD,
         .session.keepalive = 30,
+        .buffer.size = 16384,
     };
 
     s_client = esp_mqtt_client_init(&cfg);
@@ -129,4 +180,14 @@ esp_err_t mqttClient_publish(const char *topic, const char *payload)
 void mqttClient_onCommand(void (*cb)(const char *topic, const char *payload))
 {
     s_cmd_cb = cb;
+}
+
+void mqttClient_onAudioStart(void (*cb)(const char *name, size_t total_size))
+{
+    s_audio_start_cb = cb;
+}
+
+void mqttClient_onAudioChunk(void (*cb)(const uint8_t *data, size_t len))
+{
+    s_audio_chunk_cb = cb;
 }

@@ -85,7 +85,7 @@
         </section>
 
         <section class="panel ctrl-panel">
-            <h2><span class="icon">&#9788;</span> 灯带控制</h2>
+            <h2><span class="icon">&#9788;</span> 设备控制</h2>
             <div class="ctrl-row">
                 <button class="btn btn-on" id="btn-led-on">开灯</button>
                 <button class="btn btn-off" id="btn-led-off">关灯</button>
@@ -100,6 +100,11 @@
                 <input type="range" id="slider-brightness" min="10" max="100" value="80">
                 <span id="val-brightness" class="brightness-val">80%</span>
             </div>
+            <div class="brightness-ctrl" style="margin-top:12px;">
+                <span class="ctrl-label">音量</span>
+                <input type="range" id="slider-volume" min="0" max="100" value="80">
+                <span id="val-volume" class="brightness-val">80%</span>
+            </div>
         </section>
     </main>
 
@@ -109,6 +114,16 @@
             <button class="btn-clear" id="btn-clear-log">清空</button>
         </div>
         <div id="log-list"></div>
+    </section>
+
+    <section class="panel audio-panel">
+        <div class="audio-header">
+            <h2>&#9835; 音频播放</h2>
+            <button class="btn-clear" id="btn-refresh-audio">刷新</button>
+        </div>
+        <div id="audio-list">
+            <div class="audio-empty">点击刷新获取音频列表</div>
+        </div>
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>

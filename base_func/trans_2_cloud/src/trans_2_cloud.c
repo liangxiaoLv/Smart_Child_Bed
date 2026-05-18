@@ -1,6 +1,7 @@
 #include "trans_2_cloud.h"
 #include "cloud_mqtt.h"
 #include "rgb_led.h"
+#include "wav_player.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -131,8 +132,62 @@ static void onCloudCommand(const char *topic, const char *payload)
         }
     } else if (strcmp(cmd, "led_brightness") == 0) {
         rgbLed_setBrightness((uint8_t)numVal);
+    } else if (strcmp(cmd, "volume") == 0) {
+        wavPlayer_setVolume((uint8_t)numVal);
     } else {
         ESP_LOGW(TAG, "未知指令: %s", cmd);
+    }
+}
+
+/* ─── 音频数据接收与播放 ──────────────────────────────────── */
+static uint8_t *s_audio_buf    = NULL;
+static size_t   s_audio_size   = 0;
+static size_t   s_audio_offset = 0;
+
+static void onAudioStart(const char *name, size_t total_size)
+{
+    ESP_LOGI(TAG, "音频开始: %s (%u bytes)", name, (unsigned)total_size);
+
+    if (s_audio_buf) {
+        free(s_audio_buf);
+        s_audio_buf = NULL;
+    }
+    s_audio_size   = 0;
+    s_audio_offset = 0;
+
+    if (total_size == 0 || total_size > 4 * 1024 * 1024) {
+        ESP_LOGE(TAG, "音频大小无效: %u", (unsigned)total_size);
+        return;
+    }
+
+    s_audio_buf = heap_caps_malloc(total_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!s_audio_buf) {
+        s_audio_buf = malloc(total_size);
+    }
+    if (!s_audio_buf) {
+        ESP_LOGE(TAG, "音频缓冲区分配失败 (%u bytes)", (unsigned)total_size);
+        return;
+    }
+    s_audio_size = total_size;
+}
+
+static void onAudioChunk(const uint8_t *data, size_t len)
+{
+    if (!s_audio_buf || s_audio_offset + len > s_audio_size) {
+        ESP_LOGW(TAG, "忽略音频块 (buf=%p off=%u len=%u size=%u)",
+                 (void *)s_audio_buf, (unsigned)s_audio_offset,
+                 (unsigned)len, (unsigned)s_audio_size);
+        return;
+    }
+
+    memcpy(s_audio_buf + s_audio_offset, data, len);
+    s_audio_offset += len;
+
+    if (s_audio_offset >= s_audio_size) {
+        ESP_LOGI(TAG, "音频接收完成 (%u bytes)，开始播放", (unsigned)s_audio_size);
+        wavPlayer_stop();
+        vTaskDelay(pdMS_TO_TICKS(100));
+        wavPlayer_play(s_audio_buf, s_audio_size);
     }
 }
 
@@ -147,6 +202,8 @@ esp_err_t trans2cloud_start(void)
     started = true;
 
     mqttClient_onCommand(onCloudCommand);
+    mqttClient_onAudioStart(onAudioStart);
+    mqttClient_onAudioChunk(onAudioChunk);
     xTaskCreate(reportTask, "rpt2cloud", 3072, NULL, 3, NULL);
     xTaskCreate(heartbeatTask, "hb2cloud", 2048, NULL, 2, NULL);
     ESP_LOGI(TAG, "云端数据上报已启动");

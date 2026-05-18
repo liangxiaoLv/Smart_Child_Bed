@@ -8,6 +8,7 @@ idf_component_register(
         esp_netif
         esp_common
         xl9555_driver
+        wav_player
         network_provisioning
         bt
         protocomm

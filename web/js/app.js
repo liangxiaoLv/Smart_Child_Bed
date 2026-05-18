@@ -23,6 +23,7 @@ function connect() {
     ws.onopen = () => {
         setOnline(true);
         addLog('system', 'WebSocket 已连接');
+        requestAudioList();
     };
 
     ws.onclose = () => {
@@ -38,7 +39,7 @@ function connect() {
     ws.onmessage = (evt) => {
         try {
             const data = JSON.parse(evt.data);
-            handleMessage(data.topic, data.payload);
+            handleRawMessage(data);
         } catch (e) {}
     };
 }
@@ -53,6 +54,15 @@ function handleMessage(topic, payload) {
         } catch (e) {}
     } else if (topic === TOPIC_HEARTBEAT) {
         resetHeartbeat();
+    }
+}
+
+function handleRawMessage(data) {
+    /* 处理带 type 字段的消息（音频列表等） */
+    if (data.type === 'audio_list') {
+        handleAudioList(data.files);
+    } else if (data.topic !== undefined) {
+        handleMessage(data.topic, data.payload);
     }
 }
 
@@ -95,6 +105,39 @@ function sendCommand(cmd, value) {
     var payload = JSON.stringify({ cmd: cmd, value: value });
     ws.send(JSON.stringify({ topic: TOPIC_CONTROL, payload: payload }));
     addLog(TOPIC_CONTROL, payload);
+}
+
+/* ─── 音频播放 ──────────────────────────────────── */
+function requestAudioList() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'list_audio' }));
+}
+
+function playAudio(filename) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addLog('system', '未连接，无法播放音频');
+        return;
+    }
+    ws.send(JSON.stringify({ type: 'play_audio', file: filename }));
+    addLog('audio', '请求播放: ' + filename);
+}
+
+function handleAudioList(files) {
+    var list = document.getElementById('audio-list');
+    if (!files || files.length === 0) {
+        list.innerHTML = '<div class="audio-empty">/source 目录下没有 WAV 文件</div>';
+        return;
+    }
+    var html = '';
+    files.forEach(function(f) {
+        var sizeKB = (f.size / 1024).toFixed(1);
+        html += '<div class="audio-item">' +
+                '<span class="audio-name">' + f.name + '</span>' +
+                '<span class="audio-size">' + sizeKB + ' KB</span>' +
+                '<button class="btn btn-play" onclick="playAudio(\'' + f.name + '\')">播放</button>' +
+                '</div>';
+    });
+    list.innerHTML = html;
 }
 
 /* ─── 在线状态管理 ──────────────────────────────── */
@@ -143,14 +186,25 @@ $modeBtns.forEach(function(btn) {
     };
 });
 
-var slider = document.getElementById('slider-brightness');
-slider.oninput = function() {
-    document.getElementById('val-brightness').textContent = slider.value + '%';
+var brightnessSlider = document.getElementById('slider-brightness');
+brightnessSlider.oninput = function() {
+    document.getElementById('val-brightness').textContent = brightnessSlider.value + '%';
 };
-slider.onchange = function() { sendCommand('led_brightness', parseInt(slider.value)); };
+brightnessSlider.onchange = function() { sendCommand('led_brightness', parseInt(brightnessSlider.value)); };
+
+var volumeSlider = document.getElementById('slider-volume');
+volumeSlider.oninput = function() {
+    document.getElementById('val-volume').textContent = volumeSlider.value + '%';
+};
+volumeSlider.onchange = function() { sendCommand('volume', parseInt(volumeSlider.value)); };
 
 document.getElementById('btn-clear-log').onclick = function() {
     $logList.innerHTML = '';
+};
+
+document.getElementById('btn-refresh-audio').onclick = function() {
+    requestAudioList();
+    addLog('audio', '刷新音频列表');
 };
 
 /* ─── 启动 ──────────────────────────────────────── */

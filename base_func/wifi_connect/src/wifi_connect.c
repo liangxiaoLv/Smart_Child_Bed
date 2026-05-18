@@ -13,6 +13,7 @@
 
 #include "wifi_connect.h"
 #include "xl9555_driver.h"
+#include "wav_player.h"
 #include "trans_2_cloud.h"
 
 #include "freertos/FreeRTOS.h"
@@ -35,6 +36,9 @@
 /* ─── 常量 ─────────────────────────────────────────────────── */
 
 static const char *TAG = "wifi_connect";
+
+extern const uint8_t start_connect_wav_start[] asm("_binary_start_connect_wav_start");
+extern const uint8_t start_connect_wav_end[]   asm("_binary_start_connect_wav_end");
 
 #define PROV_SEC2_USERNAME    "wifiprov"
 #define PROV_SEC2_PWD         "abcd1234"
@@ -201,6 +205,9 @@ static void key0MonitorTask(void *arg)
             press_ms += KEY0_POLL_MS;
             if (press_ms >= KEY0_LONG_PRESS_MS) {
                 ESP_LOGW(TAG, "KEY0 长按 %"PRIu32"ms，清除凭证并重启", press_ms);
+                size_t len = start_connect_wav_end - start_connect_wav_start;
+                wavPlayer_play(start_connect_wav_start, len);
+                vTaskDelay(pdMS_TO_TICKS(500));
                 network_prov_mgr_reset_wifi_provisioning();
                 esp_restart();
             }

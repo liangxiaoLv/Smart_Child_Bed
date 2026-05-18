@@ -68,17 +68,17 @@
 #define LCD_B5_PIN          GPIO_NUM_15     /* 蓝色数据位 B5 */
 #define LCD_B6_PIN          GPIO_NUM_7      /* 蓝色数据位 B6 */
 #define LCD_B7_PIN          GPIO_NUM_6      /* 蓝色数据位 B7 */
-#define LCD_G2_PIN          GPIO_NUM_10     /* 绿色数据位 G2 */
-#define LCD_G3_PIN          GPIO_NUM_9      /* 绿色数据位 G3 */
-#define LCD_G4_PIN          GPIO_NUM_46     /* 绿色数据位 G4 */
-#define LCD_G5_PIN          GPIO_NUM_3      /* 绿色数据位 G5 */
+#define LCD_G2_PIN          GPIO_NUM_10     /* 绿色数据位 G2，与 I2S_DOUT 复用 */
+#define LCD_G3_PIN          GPIO_NUM_9      /* 绿色数据位 G3，与 I2S_WS 复用 */
+#define LCD_G4_PIN          GPIO_NUM_46     /* 绿色数据位 G4，与 I2S_BCLK 复用 */
+#define LCD_G5_PIN          GPIO_NUM_3      /* 绿色数据位 G5，与 I2S_MCLK 复用 */
 #define LCD_G6_PIN          GPIO_NUM_8      /* 绿色数据位 G6 */
 #define LCD_G7_PIN          GPIO_NUM_18     /* 绿色数据位 G7 */
 #define LCD_R3_PIN          GPIO_NUM_45     /* 红色数据位 R3 */
 #define LCD_R4_PIN          GPIO_NUM_48     /* 红色数据位 R4 */
 #define LCD_R5_PIN          GPIO_NUM_47     /* 红色数据位 R5 */
 #define LCD_R6_PIN          GPIO_NUM_21     /* 红色数据位 R6 */
-#define LCD_R7_PIN          GPIO_NUM_14     /* 红色数据位 R7 */
+#define LCD_R7_PIN          GPIO_NUM_14     /* 红色数据位 R7，与 I2S_SDOUT 复用 */
 
 /* 分辨率与时序参数 */
 #define LCD_H_RES                   800         /* 水平分辨率（像素） */
@@ -134,6 +134,22 @@
 #define ENS160_SDA_PIN      GPIO_NUM_17     /* ENS160 I2C 数据线 */
 #define ENS160_SCL_PIN      GPIO_NUM_18     /* ENS160 I2C 时钟线 */
 #define ENS160_I2C_ADDR     0x52            /* ENS160 7-bit I2C 设备地址（MISO/ADDR 低电平） */
+
+/* ═══════════════════════════════════════════════════════════════
+ * ES8388 — 音频编解码芯片（挂载于 I2C0）
+ * ═══════════════════════════════════════════════════════════════ */
+#define ES8388_I2C_ADDR     0x10            /* ES8388 7-bit I2C 设备地址 */
+
+/* ═══════════════════════════════════════════════════════════════
+ * I2S — 音频
+ * 复用 LCD 数据线
+ * ═══════════════════════════════════════════════════════════════ */
+#define I2S_MCLK_PIN        GPIO_NUM_3      /* I2S 主时钟，与 LCD_G5 复用 */
+#define I2S_BCLK_PIN        GPIO_NUM_46     /* I2S 位时钟 (SCK)，与 LCD_G4 复用 */
+#define I2S_WS_PIN          GPIO_NUM_9      /* I2S 字选 (LRCK)，与 LCD_G3 复用 */
+#define I2S_DOUT_PIN        GPIO_NUM_10     /* I2S 数据输出 (接 ES8388 SDIN)，与 LCD_G2 复用 */
+#define I2S_DIN_PIN         GPIO_NUM_14     /* I2S 数据输入 (接 ES8388 SDOUT)，与 LCD_R7 复用 */
+#define I2S_PORT_NUM        0               /* I2S 端口号 */
 
 /* ═══════════════════════════════════════════════════════════════
  * WS2812 RGB 灯带 — RMT
