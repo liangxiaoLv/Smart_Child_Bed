@@ -26,6 +26,9 @@
 static const char *TAG = "ens210";
 
 static i2c_master_dev_handle_t ens210_dev;
+static float s_latest_temp;
+
+float ens210_getLatestTemp(void) { return s_latest_temp; }
 
 static uint32_t crc7(uint32_t val)
 {
@@ -86,6 +89,7 @@ static void ens210Task(void *arg)
 
         float temp_c = (float)t_data / 64.0f - 273.15f;
         float hum    = (float)h_data / 512.0f;
+        s_latest_temp = temp_c;
 
         ESP_LOGI(TAG, "温度: %.2f °C (valid=%d crc=%d)  湿度: %.2f %% (valid=%d crc=%d)",
                  temp_c, t_valid, t_crc_ok, hum, h_valid, h_crc_ok);

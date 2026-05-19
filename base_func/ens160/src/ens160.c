@@ -21,6 +21,9 @@
 static const char *TAG = "ens160";
 
 static i2c_master_dev_handle_t ens160_dev;
+static uint8_t s_latest_aqi;
+
+uint8_t ens160_getLatestAQI(void) { return s_latest_aqi; }
 
 static esp_err_t writeReg(uint8_t reg, const uint8_t *data, size_t len)
 {
@@ -107,6 +110,7 @@ static void ens160Task(void *arg)
         uint16_t tvoc_ppb = (uint16_t)tvoc[0] | ((uint16_t)tvoc[1] << 8);
         uint16_t eco2_ppm = (uint16_t)eco2[0] | ((uint16_t)eco2[1] << 8);
         aqi &= 0x07;
+        s_latest_aqi = aqi;
 
         uint16_t t_raw = (uint16_t)dt[0]  | ((uint16_t)dt[1]  << 8);
         uint16_t h_raw = (uint16_t)drh[0] | ((uint16_t)drh[1] << 8);

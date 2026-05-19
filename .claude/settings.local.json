@@ -52,7 +52,8 @@
       "PowerShell(& \"C:\\\\Espressif\\\\tools\\\\xtensa-esp-elf\\\\esp-15.2.0_20251204\\\\xtensa-esp-elf\\\\bin\\\\xtensa-esp32s3-elf-nm.exe\" \"E:\\\\Smart_Child_Bed\\\\build\\\\esp-idf\\\\wav_player\\\\CMakeFiles\\\\__idf_wav_player.dir\\\\__\\\\__\\\\start_connect.wav.S.obj\")",
       "PowerShell(& \"C:\\\\Espressif\\\\tools\\\\xtensa-esp-elf\\\\esp-15.2.0_20251204\\\\xtensa-esp-elf\\\\bin\\\\xtensa-esp32s3-elf-nm.exe\" \"E:\\\\Smart_Child_Bed\\\\build\\\\esp-idf\\\\wav_player\\\\CMakeFiles\\\\__idf_wav_player.dir\\\\__\\\\__\\\\wifi_connect_ok.wav.S.obj\")",
       "Bash(ssh *)",
-      "Bash(echo *)"
+      "Bash(echo *)",
+      "PowerShell(Test-Path *)"
     ]
   }
 }

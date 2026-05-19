@@ -33,8 +33,8 @@
  * 重映射：ENS210 使用时将 I2C1 映射到 GPIO 17/18
  * ═══════════════════════════════════════════════════════════════ */
 #define I2C1_PORT_NUM       1               /* I2C 端口号，对应 I2C_NUM_1 */
-#define I2C1_SDA_PIN        GPIO_NUM_5      /* I2C1 数据线，与 LCD_PCLK / RADAR_RX 复用 */
-#define I2C1_SCL_PIN        GPIO_NUM_4      /* I2C1 时钟线，与 LCD_DE / RADAR_TX 复用 */
+#define I2C1_SDA_PIN        GPIO_NUM_17      /* I2C1 数据线，与 LCD_PCLK / RADAR_RX 复用 */
+#define I2C1_SCL_PIN        GPIO_NUM_18      /* I2C1 时钟线，与 LCD_DE / RADAR_TX 复用 */
 #define I2C1_SPEED_HZ       100000          /* I2C1 总线速率 100 kHz */
 
 /* ═══════════════════════════════════════════════════════════════
@@ -104,8 +104,8 @@
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
 #define RADAR_UART_NUM      2               /* 雷达使用 UART1 */
-#define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
-#define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
+#define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收 */
+#define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
 #define RADAR_RX_BUF_SIZE   2048            /* 雷达 UART RX 缓冲区 */
 
@@ -114,8 +114,8 @@
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
 #define RED_UART_NUM        1               /* 红外使用 UART1 */
-#define RED_RX_PIN          GPIO_NUM_5      /* 红外 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
-#define RED_TX_PIN          GPIO_NUM_4      /* 红外 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
+#define RED_RX_PIN          GPIO_NUM_6      /* 红外 UART 接收*/
+#define RED_TX_PIN          GPIO_NUM_7      /* 红外 UART 发送 */
 #define RED_BAUD_RATE       921600          /* 红外串口波特率 */
 #define RED_RX_BUF_SIZE     20480           /* 红外 UART RX 缓冲区（一帧 10256B） */
 
@@ -155,7 +155,7 @@
  * WS2812 RGB 灯带 — RMT
  * 数据线 GPIO 45
  * ═══════════════════════════════════════════════════════════════ */
-#define WS2812_DATA_PIN     GPIO_NUM_45      /* WS2812 数据线 */
+#define WS2812_DATA_PIN     GPIO_NUM_38      /* WS2812 数据线 */
 #define WS2812_LED_NUM      15              /* 灯带 LED 数量 */
 #define WS2812_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
 
@@ -164,5 +164,5 @@
  * 数据线 GPIO 48，与 LCD_R4 复用
  * ═══════════════════════════════════════════════════════════════ */
 #define RGB_SCREEN_DATA_PIN     GPIO_NUM_39
-#define RGB_SCREEN_LED_NUM      65              /* 第0颗做电平转换，64 颗实际显示 */
+#define RGB_SCREEN_LED_NUM      256              /* 256 颗实际显示 */
 #define RGB_SCREEN_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
