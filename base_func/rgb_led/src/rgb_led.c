@@ -24,7 +24,8 @@ typedef enum {
 } rgbState_t;
 
 static rgbState_t s_state = RGB_OFF;
-static float s_brightness = 1.0f;  /* 0.0 ~ 1.0，由外部 API 设置 */
+static float s_brightness = 1.0f;
+static ws2812_handle_t s_ws = NULL;
 
 static bool keyEdge(xl9555_port_t port, uint8_t mask)
 {
@@ -51,8 +52,8 @@ static void fillColor(uint8_t r, uint8_t g, uint8_t b)
     uint8_t _r = (uint8_t)((float)r * s_brightness);
     uint8_t _g = (uint8_t)((float)g * s_brightness);
     uint8_t _b = (uint8_t)((float)b * s_brightness);
-    ws2812Driver_setAll(_r, _g, _b);
-    ws2812Driver_flush();
+    ws2812Driver_setAll(s_ws, _r, _g, _b);
+    ws2812Driver_flush(s_ws);
 }
 
 static void hsvToRgb(float h, float s, float v, float *r, float *g, float *b)
@@ -149,21 +150,22 @@ static void rgbLedTask(void *arg)
     }
 }
 
-esp_err_t rgbLed_work(void)
+esp_err_t rgbLed_work(i2c_master_bus_handle_t bus)
 {
-    esp_err_t ret = xl9555Driver_init();
+    if (!bus) return ESP_ERR_INVALID_ARG;
+
+    esp_err_t ret = xl9555Driver_init(bus);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "XL9555 初始化失败");
         return ret;
     }
 
-    ret = ws2812Driver_init();
-    if (ret != ESP_OK) {
+    s_ws = ws2812Driver_new(WS2812_DATA_PIN, WS2812_LED_NUM);
+    if (!s_ws) {
         ESP_LOGE(TAG, "WS2812 初始化失败");
-        return ret;
+        return ESP_FAIL;
     }
-
-    ws2812Driver_off();
+    ws2812Driver_off(s_ws);
 
     xTaskCreate(rgbLedTask, "rgb_led", 3072, NULL, 2, NULL);
     ESP_LOGI(TAG, "RGB 灯带任务已启动");

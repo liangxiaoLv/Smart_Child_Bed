@@ -43,13 +43,14 @@ typedef enum {
 /**
  * 初始化 XL9555。
  *
- * 内部调用 i2cDriver_initBus() 初始化 I2C0（SDA=41, SCL=42），
- * 并按 CLAUDE.md 配置方向寄存器：
+ * @param bus  已初始化的 I2C 总线句柄（由 main.c 统一创建）
+ *
+ * 按 pin_map.h 配置方向寄存器：
  *   Port-0: 0x03（P0.0/P0.1 输入，其余输出）
  *   Port-1: 0xF0（P1.7-P1.4 输入，其余输出）
  * 初始输出：SPK_EN / BEEP 拉高（关闭）。
  */
-esp_err_t xl9555Driver_init(void);
+esp_err_t xl9555Driver_init(i2c_master_bus_handle_t bus);
 
 /**
  * 写整个端口的输出寄存器。

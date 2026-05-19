@@ -101,16 +101,11 @@ static void ens210Task(void *arg)
     }
 }
 
-esp_err_t ens210_temp_info(void)
+esp_err_t ens210_temp_info(i2c_master_bus_handle_t bus)
 {
-    i2c_master_bus_handle_t bus;
-    esp_err_t ret = i2cDriver_initBus(I2C1_PORT_NUM,
-                                     ENS210_SDA_PIN,
-                                     ENS210_SCL_PIN,
-                                     &bus);
-    if (ret != ESP_OK) return ret;
+    if (!bus) return ESP_ERR_INVALID_ARG;
 
-    ret = i2cDriver_addDevice(bus, ENS210_I2C_ADDR, I2C1_SPEED_HZ, &ens210_dev);
+    esp_err_t ret = i2cDriver_addDevice(bus, ENS210_I2C_ADDR, I2C1_SPEED_HZ, &ens210_dev);
     if (ret != ESP_OK) return ret;
 
     /* 读 PART_ID 需要 active 状态: 先关低功耗 → 等 SYS_ACTIVE → 读 → 恢复低功耗 */

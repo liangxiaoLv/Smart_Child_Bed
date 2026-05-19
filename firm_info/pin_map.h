@@ -103,7 +103,7 @@
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
-#define RADAR_UART_NUM      1               /* 雷达使用 UART1 */
+#define RADAR_UART_NUM      2               /* 雷达使用 UART1 */
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收，与 I2C1_SDA / LCD_PCLK 复用 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送，与 I2C1_SCL / LCD_DE 复用 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
@@ -158,3 +158,11 @@
 #define WS2812_DATA_PIN     GPIO_NUM_45      /* WS2812 数据线 */
 #define WS2812_LED_NUM      15              /* 灯带 LED 数量 */
 #define WS2812_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
+
+/* ═══════════════════════════════════════════════════════════════
+ * RGB 8×32 点阵屏 — RMT (WS2812 协议)
+ * 数据线 GPIO 48，与 LCD_R4 复用
+ * ═══════════════════════════════════════════════════════════════ */
+#define RGB_SCREEN_DATA_PIN     GPIO_NUM_39
+#define RGB_SCREEN_LED_NUM      65              /* 第0颗做电平转换，64 颗实际显示 */
+#define RGB_SCREEN_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */

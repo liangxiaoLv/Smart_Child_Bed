@@ -15,18 +15,12 @@ static esp_err_t writeReg(uint8_t reg, uint8_t val)
     return i2cDriver_write(s_dev, (uint8_t[]){reg, val}, 2, 100);
 }
 
-esp_err_t es8388Driver_init(void)
+esp_err_t es8388Driver_init(i2c_master_bus_handle_t bus)
 {
+    if (!bus) return ESP_ERR_INVALID_ARG;
     if (s_inited) return ESP_OK;
 
-    i2c_master_bus_handle_t bus;
-    esp_err_t ret = i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &bus);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C0 总线初始化失败");
-        return ret;
-    }
-
-    ret = i2cDriver_addDevice(bus, ES8388_I2C_ADDR, I2C0_SPEED_HZ, &s_dev);
+    esp_err_t ret = i2cDriver_addDevice(bus, ES8388_I2C_ADDR, I2C0_SPEED_HZ, &s_dev);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "ES8388 设备添加失败");
         return ret;

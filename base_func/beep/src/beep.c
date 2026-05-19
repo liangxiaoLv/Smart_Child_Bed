@@ -16,9 +16,11 @@ static void beepTask(void *arg)
     }
 }
 
-esp_err_t beep_work(void)
+esp_err_t beep_work(i2c_master_bus_handle_t bus)
 {
-    esp_err_t ret = xl9555Driver_init();
+    if (!bus) return ESP_ERR_INVALID_ARG;
+
+    esp_err_t ret = xl9555Driver_init(bus);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "XL9555 初始化失败");
         return ret;

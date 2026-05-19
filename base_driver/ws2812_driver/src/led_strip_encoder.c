@@ -87,15 +87,15 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config,
     rmt_bytes_encoder_config_t bytes_encoder_config = {
         .bit0 = {
             .level0 = 1,
-            .duration0 = 0.3 * config->resolution / 1000000,
+            .duration0 = 0.4 * config->resolution / 1000000,
             .level1 = 0,
-            .duration1 = 0.9 * config->resolution / 1000000,
+            .duration1 = 0.8 * config->resolution / 1000000,
         },
         .bit1 = {
             .level0 = 1,
-            .duration0 = 0.9 * config->resolution / 1000000,
+            .duration0 = 0.7 * config->resolution / 1000000,
             .level1 = 0,
-            .duration1 = 0.3 * config->resolution / 1000000,
+            .duration1 = 0.5 * config->resolution / 1000000,
         },
         .flags.msb_first = 1,
     };
@@ -105,7 +105,7 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config,
     ESP_RETURN_ON_ERROR(rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder),
                         TAG, "create copy encoder failed");
 
-    uint32_t reset_ticks = config->resolution / 1000000 * 50 / 2;
+    uint32_t reset_ticks = config->resolution / 1000000 * 80 / 2;
     led_encoder->reset_code = (rmt_symbol_word_t) {
         .level0 = 0,
         .duration0 = reset_ticks,

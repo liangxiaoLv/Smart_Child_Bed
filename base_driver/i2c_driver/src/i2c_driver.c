@@ -11,7 +11,16 @@ esp_err_t i2cDriver_initBus(int port,
                              int scl,
                              i2c_master_bus_handle_t *bus_out)
 {
-    if (port < I2C_MAX_PORT && s_bus[port]) {
+    if (port < 0 || port >= I2C_MAX_PORT) {
+        ESP_LOGE(TAG, "I2C 端口号 %d 无效", port);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!bus_out) {
+        ESP_LOGE(TAG, "bus_out 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (s_bus[port]) {
         ESP_LOGI(TAG, "I2C%d 总线已存在，复用句柄", port);
         *bus_out = s_bus[port];
         return ESP_OK;
@@ -31,7 +40,7 @@ esp_err_t i2cDriver_initBus(int port,
         return ret;
     }
 
-    if (port < I2C_MAX_PORT) s_bus[port] = *bus_out;
+    s_bus[port] = *bus_out;
     return ESP_OK;
 }
 
@@ -40,6 +49,15 @@ esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
                                uint32_t speed_hz,
                                i2c_master_dev_handle_t *dev_out)
 {
+    if (!bus) {
+        ESP_LOGE(TAG, "bus 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!dev_out) {
+        ESP_LOGE(TAG, "dev_out 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
     i2c_device_config_t cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address  = addr,
@@ -55,16 +73,22 @@ esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
 esp_err_t i2cDriver_write(i2c_master_dev_handle_t dev,
                            const uint8_t *data,
                            size_t len,
-                           int timeout_ms)
+                           uint32_t timeout_ms)
 {
+    if (!dev || !data || !len) {
+        return ESP_ERR_INVALID_ARG;
+    }
     return i2c_master_transmit(dev, data, len, timeout_ms);
 }
 
 esp_err_t i2cDriver_read(i2c_master_dev_handle_t dev,
                           uint8_t *buf,
                           size_t len,
-                          int timeout_ms)
+                          uint32_t timeout_ms)
 {
+    if (!dev || !buf || !len) {
+        return ESP_ERR_INVALID_ARG;
+    }
     return i2c_master_receive(dev, buf, len, timeout_ms);
 }
 
@@ -73,8 +97,11 @@ esp_err_t i2cDriver_writeRead(i2c_master_dev_handle_t dev,
                                size_t wr_len,
                                uint8_t *rd_buf,
                                size_t rd_len,
-                               int timeout_ms)
+                               uint32_t timeout_ms)
 {
+    if (!dev || !wr_data || !wr_len || !rd_buf || !rd_len) {
+        return ESP_ERR_INVALID_ARG;
+    }
     return i2c_master_transmit_receive(dev, wr_data, wr_len,
                                        rd_buf, rd_len, timeout_ms);
 }

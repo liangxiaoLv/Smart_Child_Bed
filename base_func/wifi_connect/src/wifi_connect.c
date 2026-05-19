@@ -233,7 +233,7 @@ esp_err_t wifiConnect_clearCredentials(void)
     return network_prov_mgr_reset_wifi_provisioning();
 }
 
-esp_err_t wifiConnect_init(void)
+esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
 {
     /* 1. NVS 初始化 */
     esp_err_t ret = nvs_flash_init();
@@ -244,7 +244,9 @@ esp_err_t wifiConnect_init(void)
     ESP_RETURN_ON_ERROR(ret, TAG, "NVS 初始化失败");
 
     /* 2. XL9555 + KEY0 长按监测 */
-    if (xl9555Driver_init() != ESP_OK) {
+    if (!bus) {
+        ESP_LOGW(TAG, "I2C bus 为空，跳过 XL9555 KEY0 监测");
+    } else if (xl9555Driver_init(bus) != ESP_OK) {
         ESP_LOGW(TAG, "XL9555 初始化失败，KEY0 长按功能不可用");
     } else {
         xTaskCreate(key0MonitorTask, "key0_mon", 2048, NULL, 2, NULL);

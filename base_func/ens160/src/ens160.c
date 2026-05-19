@@ -124,16 +124,11 @@ static void ens160Task(void *arg)
     }
 }
 
-esp_err_t ens160_info(void)
+esp_err_t ens160_info(i2c_master_bus_handle_t bus)
 {
-    i2c_master_bus_handle_t bus;
-    esp_err_t ret = i2cDriver_initBus(I2C1_PORT_NUM,
-                                     ENS160_SDA_PIN,
-                                     ENS160_SCL_PIN,
-                                     &bus);
-    if (ret != ESP_OK) return ret;
+    if (!bus) return ESP_ERR_INVALID_ARG;
 
-    ret = i2cDriver_addDevice(bus, ENS160_I2C_ADDR, I2C1_SPEED_HZ, &ens160_dev);
+    esp_err_t ret = i2cDriver_addDevice(bus, ENS160_I2C_ADDR, I2C1_SPEED_HZ, &ens160_dev);
     if (ret != ESP_OK) return ret;
 
     uint8_t id[2];

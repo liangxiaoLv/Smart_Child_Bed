@@ -141,6 +141,17 @@ static void playTask(void *arg)
 
 /* ─── 公共 API ────────────────────────────────────────────── */
 
+esp_err_t wavPlayer_init(i2c_master_bus_handle_t bus)
+{
+    if (!bus) return ESP_ERR_INVALID_ARG;
+
+    esp_err_t ret = es8388Driver_init(bus);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "ES8388 初始化失败");
+    }
+    return ret;
+}
+
 esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
 {
     if (!data || len == 0) return ESP_ERR_INVALID_ARG;
@@ -164,11 +175,6 @@ esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
 
     i2sDriver_deinit();
 
-    esp_err_t ret = es8388Driver_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "ES8388 初始化失败");
-        return ret;
-    }
     es8388Driver_setVolume((uint8_t)((s_volume_pct * 33) / 100));
 
     /* DAC 通常需要立体声 I2S 格式，单声道源数据写入时复制到左右声道 */
@@ -181,7 +187,7 @@ esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
     cfg.ws_io          = I2S_WS_PIN;
     cfg.dout_io        = I2S_DOUT_PIN;
 
-    ret = i2sDriver_init(&cfg);
+    esp_err_t ret = i2sDriver_init(&cfg);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2S 初始化失败");
         return ret;
