@@ -160,7 +160,7 @@ esp_err_t rgbLed_work(i2c_master_bus_handle_t bus)
         return ret;
     }
 
-    s_ws = ws2812Driver_new(WS2812_DATA_PIN, WS2812_LED_NUM);
+    s_ws = ws2812Driver_new(RGB_LED_DATA_PIN, RGB_LED_NUM);
     if (!s_ws) {
         ESP_LOGE(TAG, "WS2812 初始化失败");
         return ESP_FAIL;

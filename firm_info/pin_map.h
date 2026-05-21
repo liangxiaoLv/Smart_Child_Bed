@@ -9,7 +9,7 @@
  * 所有 GPIO 编号、外设地址、总线参数统一在此定义。
  * 其他模块需要硬件信息时 #include "pin_map.h"，禁止在各驱动内部散落定义。
  *
- * 注意：GPIO 4/5/40 存在运行时复用冲突，使用前需按场景切换 GPIO 模式。
+ * 注意：GPIO 存在运行时复用冲突，使用前需按场景切换 GPIO 模式。
  */
 
 /* ═══════════════════════════════════════════════════════════════
@@ -50,60 +50,12 @@
 #define XL9555_I2C_ADDR     0x20            /* XL9555 7-bit I2C 设备地址 */
 #define XL9555_INT_PIN      GPIO_NUM_40     /* XL9555 中断输出引脚，与 GT9XX_INT / LCD_DC 复用 */
 
-/* ═══════════════════════════════════════════════════════════════
- * LCD — ATK-MD0430（4.3 寸 800×480 RGB565）
- * ═══════════════════════════════════════════════════════════════ */
-
-/* 控制信号 */
-#define LCD_PCLK_PIN        GPIO_NUM_5      /* 像素时钟 18 MHz，下降沿有效，与 I2C1_SDA / RADAR_RX 复用 */
-#define LCD_DE_PIN          GPIO_NUM_4      /* 数据使能，与 I2C1_SCL / RADAR_TX 复用 */
-#define LCD_DC_PIN          GPIO_NUM_40     /* 数据/命令选择，与 XL9555_INT / GT9XX_INT 复用 */
-/* LCD 复位  → XL9555 P1.2 (SLCD_RST)                          */
-/* LCD 背光  → XL9555 P1.0 (LCD_BL)                            */
-/* LCD 电源  → XL9555 P1.3 (SLCD_PWR)                          */
-
-/* 16bit 数据线（RGB565 位序：B[4:0] G[5:0] R[4:0]） */
-#define LCD_B3_PIN          GPIO_NUM_17     /* 蓝色数据位 B3 */
-#define LCD_B4_PIN          GPIO_NUM_16     /* 蓝色数据位 B4 */
-#define LCD_B5_PIN          GPIO_NUM_15     /* 蓝色数据位 B5 */
-#define LCD_B6_PIN          GPIO_NUM_7      /* 蓝色数据位 B6 */
-#define LCD_B7_PIN          GPIO_NUM_6      /* 蓝色数据位 B7 */
-#define LCD_G2_PIN          GPIO_NUM_10     /* 绿色数据位 G2，与 I2S_DOUT 复用 */
-#define LCD_G3_PIN          GPIO_NUM_9      /* 绿色数据位 G3，与 I2S_WS 复用 */
-#define LCD_G4_PIN          GPIO_NUM_46     /* 绿色数据位 G4，与 I2S_BCLK 复用 */
-#define LCD_G5_PIN          GPIO_NUM_3      /* 绿色数据位 G5，与 I2S_MCLK 复用 */
-#define LCD_G6_PIN          GPIO_NUM_8      /* 绿色数据位 G6 */
-#define LCD_G7_PIN          GPIO_NUM_18     /* 绿色数据位 G7 */
-#define LCD_R3_PIN          GPIO_NUM_45     /* 红色数据位 R3 */
-#define LCD_R4_PIN          GPIO_NUM_48     /* 红色数据位 R4 */
-#define LCD_R5_PIN          GPIO_NUM_47     /* 红色数据位 R5 */
-#define LCD_R6_PIN          GPIO_NUM_21     /* 红色数据位 R6 */
-#define LCD_R7_PIN          GPIO_NUM_14     /* 红色数据位 R7，与 I2S_SDOUT 复用 */
-
-/* 分辨率与时序参数 */
-#define LCD_H_RES                   800         /* 水平分辨率（像素） */
-#define LCD_V_RES                   480         /* 垂直分辨率（像素） */
-#define LCD_PCLK_HZ                 18000000    /* 像素时钟频率 18 MHz */
-#define LCD_HSYNC_BACK_PORCH        48          /* 水平同步后沿 */
-#define LCD_HSYNC_FRONT_PORCH       88          /* 水平同步前沿 */
-#define LCD_HSYNC_PULSE_WIDTH       40          /* 水平同步脉冲宽度 */
-#define LCD_VSYNC_BACK_PORCH        3           /* 垂直同步后沿 */
-#define LCD_VSYNC_FRONT_PORCH       32          /* 垂直同步前沿 */
-#define LCD_VSYNC_PULSE_WIDTH       13          /* 垂直同步脉冲宽度 */
-
-/* ═══════════════════════════════════════════════════════════════
- * GT9XX — 触摸控制器
- * ═══════════════════════════════════════════════════════════════ */
-#define GT9XX_SDA_PIN       GPIO_NUM_39     /* GT9XX I2C 数据线 */
-#define GT9XX_SCL_PIN       GPIO_NUM_38     /* GT9XX I2C 时钟线 */
-#define GT9XX_INT_PIN       GPIO_NUM_40     /* GT9XX 中断引脚，与 XL9555_INT / LCD_DC 复用 */
-/* GT9XX 复位 → XL9555 P1.1 (CT_RST) */
 
 /* ═══════════════════════════════════════════════════════════════
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
-#define RADAR_UART_NUM      2               /* 雷达使用 UART1 */
+#define RADAR_UART_NUM      2               /* 雷达使用 UART2 */
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
@@ -155,9 +107,9 @@
  * WS2812 RGB 灯带 — RMT
  * 数据线 GPIO 45
  * ═══════════════════════════════════════════════════════════════ */
-#define WS2812_DATA_PIN     GPIO_NUM_38      /* WS2812 数据线 */
-#define WS2812_LED_NUM      15              /* 灯带 LED 数量 */
-#define WS2812_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
+#define RGB_LED_DATA_PIN     GPIO_NUM_38      /* WS2812 数据线 */
+#define RGB_LED_NUM      15              /* 灯带 LED 数量 */
+#define RGB_LED_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
 
 /* ═══════════════════════════════════════════════════════════════
  * RGB 8×32 点阵屏 — RMT (WS2812 协议)

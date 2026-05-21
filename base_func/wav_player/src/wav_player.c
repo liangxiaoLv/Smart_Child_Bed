@@ -28,6 +28,7 @@ typedef struct {
 #pragma pack(pop)
 
 /* ─── 全局播放状态 ────────────────────────────────────────── */
+static i2sDriver_handle_t s_i2s;
 static TaskHandle_t s_play_task;
 static const uint8_t *s_pcm_data;
 static size_t s_pcm_len;
@@ -120,14 +121,14 @@ static void playTask(void *arg)
         while (!s_stop && remaining >= 2) {
             int16_t stereo[2];
             stereo[0] = stereo[1] = (int16_t)(ptr[0] | (ptr[1] << 8));
-            i2sDriver_write((uint8_t *)stereo, 4, NULL, 1000);
+            i2sDriver_write(s_i2s, (uint8_t *)stereo, 4, NULL, 1000);
             ptr += 2;
             remaining -= 2;
         }
     } else {
         while (!s_stop && remaining > 0) {
             size_t n = remaining < 2048 ? remaining : 2048;
-            i2sDriver_write(ptr, n, NULL, 1000);
+            i2sDriver_write(s_i2s, ptr, n, NULL, 1000);
             ptr += n;
             remaining -= n;
         }
@@ -173,7 +174,8 @@ esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
     ESP_LOGI(TAG, "WAV: %luHz %uch %ubit, PCM %u bytes",
              sample_rate, num_channels, bits_per_sample, (unsigned)s_pcm_len);
 
-    i2sDriver_deinit();
+    i2sDriver_deinit(s_i2s);
+    s_i2s = NULL;
 
     es8388Driver_setVolume((uint8_t)((s_volume_pct * 33) / 100));
 
@@ -187,7 +189,7 @@ esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
     cfg.ws_io          = I2S_WS_PIN;
     cfg.dout_io        = I2S_DOUT_PIN;
 
-    esp_err_t ret = i2sDriver_init(&cfg);
+    esp_err_t ret = i2sDriver_init(I2S_PORT_NUM, &cfg, &s_i2s);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2S 初始化失败");
         return ret;

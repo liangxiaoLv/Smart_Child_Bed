@@ -50,16 +50,12 @@ static void parseFrame(const uint8_t *arr)
     int frameNum  = arr[infoOff + 0]  | (arr[infoOff + 1]  << 8);
     double vdd    = (double)(arr[infoOff + 2]  | (arr[infoOff + 3]  << 8)) / 10000.0;
     double die    = (double)(arr[infoOff + 4]  | (arr[infoOff + 5]  << 8)) / 100.0 - 273.15;
-    int timeStamp = arr[infoOff + 6]  | (arr[infoOff + 7]  << 8)
-                  | (arr[infoOff + 8]  << 16) | (arr[infoOff + 9]  << 24);
     int pixMax    = (int16_t)(arr[infoOff + 10] | (arr[infoOff + 11] << 8));
     int pixMin    = (int16_t)(arr[infoOff + 12] | (arr[infoOff + 13] << 8));
     uint16_t crcExp = arr[infoOff + 14] | (arr[infoOff + 15] << 8);
 
     int bodyTemp  = arr[253] | (arr[254] << 8);
     int swVer     = arr[263] | (arr[264] << 8);
-    int swDate    = arr[265] | (arr[266] << 8)
-                  | (arr[267] << 16) | (arr[268] << 24);
 
     if (vdd < 3.0 || vdd > 3.6) {
         ESP_LOGW(TAG, "Vdd 异常: %.3fV", vdd);

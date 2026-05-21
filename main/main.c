@@ -97,9 +97,9 @@ void app_main(void)
     /* 8. 初始化 NTP 时间同步 */
     setenv("TZ", "CST-8", 1);
     tzset();
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "ntp.aliyun.com");
-    sntp_init();
+    esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    esp_sntp_setservername(0, "ntp.aliyun.com");
+    esp_sntp_init();
 
     /* 9. 启动点阵屏显示任务 */
     xTaskCreate(displayTask, "rgb_disp", 3072, NULL, 2, NULL);
