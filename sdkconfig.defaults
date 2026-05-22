@@ -1,8 +1,10 @@
+# ─── TCP Keepalive ───────────────────────────────────────────
 CONFIG_LWIP_TCP_KEEPALIVE=y
 CONFIG_LWIP_TCP_KEEPALIVE_IDLE=10
 CONFIG_LWIP_TCP_KEEPALIVE_INTERVAL=10
 CONFIG_LWIP_TCP_KEEPALIVE_COUNT=3
 
+# ─── PSRAM (Octal-SPI) ─────────────────────────────────────
 CONFIG_ESP32S3_SPIRAM_SUPPORT=y
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
@@ -10,3 +12,19 @@ CONFIG_SPIRAM_SPEED_80M=y
 CONFIG_SPIRAM_USE_MALLOC=y
 CONFIG_SPIRAM_USE_CAPS_ALLOC=y
 CONFIG_SPIRAM_MEMTEST=y
+
+# ─── Bluetooth — BLE 配网（Bluedroid + BLE 4.2）───────────
+# protocomm 的 simple_ble.c 使用 BLE 4.2 广播 API
+# 不能与 BLE 5.0 同时开启
+CONFIG_BT_ENABLED=y
+CONFIG_BT_BLUEDROID_ENABLED=y
+CONFIG_BT_BLE_50_FEATURES_SUPPORTED=n
+CONFIG_BT_BLE_42_FEATURES_SUPPORTED=y
+
+# ─── Flash 与分区表 ───────────────────────────────────────
+# ESP32-S3FH4R2: 16 MB Flash
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# 自定义分区表 (partitions.csv: factory 4 MB / storage ~12 MB)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
