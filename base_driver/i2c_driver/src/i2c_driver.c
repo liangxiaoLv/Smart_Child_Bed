@@ -1,0 +1,107 @@
+#include "i2c_driver.h"
+#include "esp_log.h"
+
+static const char *TAG = "i2c_driver";
+
+#define I2C_MAX_PORT 2
+static i2c_master_bus_handle_t s_bus[I2C_MAX_PORT];
+
+esp_err_t i2cDriver_initBus(int port,
+                             int sda,
+                             int scl,
+                             i2c_master_bus_handle_t *bus_out)
+{
+    if (port < 0 || port >= I2C_MAX_PORT) {
+        ESP_LOGE(TAG, "I2C 端口号 %d 无效", port);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!bus_out) {
+        ESP_LOGE(TAG, "bus_out 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (s_bus[port]) {
+        ESP_LOGI(TAG, "I2C%d 总线已存在，复用句柄", port);
+        *bus_out = s_bus[port];
+        return ESP_OK;
+    }
+
+    i2c_master_bus_config_t cfg = {
+        .i2c_port          = port,
+        .sda_io_num        = sda,
+        .scl_io_num        = scl,
+        .clk_source        = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    esp_err_t ret = i2c_new_master_bus(&cfg, bus_out);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "I2C%d 总线初始化失败: %s", port, esp_err_to_name(ret));
+        return ret;
+    }
+
+    s_bus[port] = *bus_out;
+    return ESP_OK;
+}
+
+esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
+                               uint16_t addr,
+                               uint32_t speed_hz,
+                               i2c_master_dev_handle_t *dev_out)
+{
+    if (!bus) {
+        ESP_LOGE(TAG, "bus 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!dev_out) {
+        ESP_LOGE(TAG, "dev_out 不能为 NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    i2c_device_config_t cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address  = addr,
+        .scl_speed_hz    = speed_hz,
+    };
+    esp_err_t ret = i2c_master_bus_add_device(bus, &cfg, dev_out);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "I2C 设备 0x%02X 添加失败: %s", addr, esp_err_to_name(ret));
+    }
+    return ret;
+}
+
+esp_err_t i2cDriver_write(i2c_master_dev_handle_t dev,
+                           const uint8_t *data,
+                           size_t len,
+                           uint32_t timeout_ms)
+{
+    if (!dev || !data || !len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return i2c_master_transmit(dev, data, len, timeout_ms);
+}
+
+esp_err_t i2cDriver_read(i2c_master_dev_handle_t dev,
+                          uint8_t *buf,
+                          size_t len,
+                          uint32_t timeout_ms)
+{
+    if (!dev || !buf || !len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return i2c_master_receive(dev, buf, len, timeout_ms);
+}
+
+esp_err_t i2cDriver_writeRead(i2c_master_dev_handle_t dev,
+                               const uint8_t *wr_data,
+                               size_t wr_len,
+                               uint8_t *rd_buf,
+                               size_t rd_len,
+                               uint32_t timeout_ms)
+{
+    if (!dev || !wr_data || !wr_len || !rd_buf || !rd_len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return i2c_master_transmit_receive(dev, wr_data, wr_len,
+                                       rd_buf, rd_len, timeout_ms);
+}

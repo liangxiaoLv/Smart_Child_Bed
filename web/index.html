@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能儿童床</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <span class="logo-icon">&#9737;</span>
+            <h1>智能儿童床</h1>
+        </div>
+        <div class="header-right">
+            <div id="clock" class="clock">--:--:--</div>
+            <div id="wifi-status" class="wifi-badge">
+                <span id="online-dot" class="dot offline"></span>
+                <span id="wifi-label">未连接</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel sensor-panel">
+            <h2><span class="icon">&#8996;</span> 传感器数据</h2>
+            <div class="sensor-grid">
+                <div class="card">
+                    <div class="card-icon presence">&#9788;</div>
+                    <div class="card-info">
+                        <span class="card-label">人体感应</span>
+                        <span class="card-value" id="val-presence">--</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon temp">&#9730;</div>
+                    <div class="card-info">
+                        <span class="card-label">环境温度</span>
+                        <span class="card-value" id="val-env-temp">-- °C</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon hum">&#9727;</div>
+                    <div class="card-info">
+                        <span class="card-label">环境湿度</span>
+                        <span class="card-value" id="val-env-hum">-- %</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon aqi">&#9925;</div>
+                    <div class="card-info">
+                        <span class="card-label">空气质量</span>
+                        <span class="card-value" id="val-aqi">--</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">&#9832;</div>
+                    <div class="card-info">
+                        <span class="card-label">TVOC</span>
+                        <span class="card-value" id="val-tvoc">-- ppb</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon eco2">&#9729;</div>
+                    <div class="card-info">
+                        <span class="card-label">eCO₂</span>
+                        <span class="card-value" id="val-eco2">-- ppm</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon breath">&#9832;</div>
+                    <div class="card-info">
+                        <span class="card-label">呼吸率</span>
+                        <span class="card-value" id="val-breath">-- 次/分</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon heart">&#9829;</div>
+                    <div class="card-info">
+                        <span class="card-label">心率</span>
+                        <span class="card-value" id="val-heart">-- bpm</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel ctrl-panel">
+            <h2><span class="icon">&#9788;</span> 设备控制</h2>
+            <div class="ctrl-row">
+                <button class="btn btn-on" id="btn-led-on">开灯</button>
+                <button class="btn btn-off" id="btn-led-off">关灯</button>
+            </div>
+            <div class="ctrl-row">
+                <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
+                <button class="btn btn-mode" data-mode="breath">呼吸</button>
+                <button class="btn btn-mode" data-mode="solid">常亮</button>
+            </div>
+            <div class="brightness-ctrl">
+                <span class="ctrl-label">亮度</span>
+                <input type="range" id="slider-brightness" min="10" max="100" value="80">
+                <span id="val-brightness" class="brightness-val">80%</span>
+            </div>
+            <div class="brightness-ctrl" style="margin-top:12px;">
+                <span class="ctrl-label">音量</span>
+                <input type="range" id="slider-volume" min="0" max="100" value="80">
+                <span id="val-volume" class="brightness-val">80%</span>
+            </div>
+        </section>
+    </main>
+
+    <section class="log-panel">
+        <div class="log-header">
+            <h3>消息日志</h3>
+            <button class="btn-clear" id="btn-clear-log">清空</button>
+        </div>
+        <div id="log-list"></div>
+    </section>
+
+    <section class="panel audio-panel">
+        <div class="audio-header">
+            <h2>&#9835; 音频播放</h2>
+            <button class="btn-clear" id="btn-refresh-audio">刷新</button>
+        </div>
+        <div id="audio-list">
+            <div class="audio-empty">点击刷新获取音频列表</div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
