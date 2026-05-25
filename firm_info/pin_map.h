@@ -121,3 +121,11 @@
 #define RGB_SCREEN_DATA_PIN     GPIO_NUM_39
 #define RGB_SCREEN_LED_NUM      256              /* 256 颗实际显示 */
 #define RGB_SCREEN_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
+
+/* ═══════════════════════════════════════════════════════════════
+ * 旋转编码器 — 正交脉冲 + 按键
+ * V → 3.3V, G → GND
+ * ═══════════════════════════════════════════════════════════════ */
+#define ROTARY_ENC_A_PIN     GPIO_NUM_17     /* A 相脉冲信号 */
+#define ROTARY_ENC_B_PIN     GPIO_NUM_16     /* B 相脉冲信号 */
+#define ROTARY_ENC_SW_PIN    GPIO_NUM_6      /* 按键信号（按下为低） */
