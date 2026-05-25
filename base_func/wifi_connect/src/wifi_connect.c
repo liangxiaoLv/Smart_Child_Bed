@@ -129,8 +129,10 @@ static void provEventHandler(void *arg, esp_event_base_t base,
             xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
             break;
         case NETWORK_PROV_END:
-            ESP_LOGI(TAG, "Provisioning service stopped");
+            ESP_LOGI(TAG, "Provisioning service stopped, restarting...");
             network_prov_mgr_deinit();
+            vTaskDelay(pdMS_TO_TICKS(500));
+            esp_restart();
             break;
         default:
             break;
