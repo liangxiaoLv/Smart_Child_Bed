@@ -108,28 +108,28 @@ static void provEventHandler(void *arg, esp_event_base_t base,
     if (base == NETWORK_PROV_EVENT) {
         switch (id) {
         case NETWORK_PROV_START:
-            ESP_LOGI(TAG, "配网服务已启动");
+            ESP_LOGI(TAG, "Provisioning service started");
             break;
         case NETWORK_PROV_WIFI_CRED_RECV: {
             wifi_sta_config_t *cfg = (wifi_sta_config_t *)data;
-            ESP_LOGI(TAG, "收到 WiFi 凭证 — SSID: %s", cfg->ssid);
+            ESP_LOGI(TAG, "Received WiFi credentials — SSID: %s", cfg->ssid);
             break;
         }
         case NETWORK_PROV_WIFI_CRED_FAIL: {
             network_prov_wifi_sta_fail_reason_t *reason =
                 (network_prov_wifi_sta_fail_reason_t *)data;
-            ESP_LOGE(TAG, "配网失败: %s",
+            ESP_LOGE(TAG, "Provisioning failed: %s",
                      *reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR ?
-                     "认证错误" : "AP 未找到");
+                     "Auth error" : "AP not found");
             network_prov_mgr_reset_wifi_sm_state_on_failure();
             break;
         }
         case NETWORK_PROV_WIFI_CRED_SUCCESS:
-            ESP_LOGI(TAG, "配网成功，WiFi 已连接");
+            ESP_LOGI(TAG, "Provisioning success, WiFi connected");
             xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
             break;
         case NETWORK_PROV_END:
-            ESP_LOGI(TAG, "配网服务已停止");
+            ESP_LOGI(TAG, "Provisioning service stopped");
             network_prov_mgr_deinit();
             break;
         default:
@@ -138,10 +138,10 @@ static void provEventHandler(void *arg, esp_event_base_t base,
     } else if (base == PROTOCOMM_TRANSPORT_BLE_EVENT) {
         switch (id) {
         case PROTOCOMM_TRANSPORT_BLE_CONNECTED:
-            ESP_LOGI(TAG, "BLE 已连接");
+            ESP_LOGI(TAG, "BLE connected");
             break;
         case PROTOCOMM_TRANSPORT_BLE_DISCONNECTED:
-            ESP_LOGI(TAG, "BLE 已断开");
+            ESP_LOGI(TAG, "BLE disconnected");
             break;
         default:
             break;
@@ -149,10 +149,10 @@ static void provEventHandler(void *arg, esp_event_base_t base,
     } else if (base == PROTOCOMM_SECURITY_SESSION_EVENT) {
         switch (id) {
         case PROTOCOMM_SECURITY_SESSION_SETUP_OK:
-            ESP_LOGI(TAG, "安全会话已建立");
+            ESP_LOGI(TAG, "Secure session established");
             break;
         case PROTOCOMM_SECURITY_SESSION_CREDENTIALS_MISMATCH:
-            ESP_LOGE(TAG, "用户名/密码验证失败");
+            ESP_LOGE(TAG, "Username/password verification failed");
             break;
         default:
             break;
@@ -169,10 +169,11 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
         if (s_retry < MAX_RETRY) {
             esp_wifi_connect();
             s_retry++;
-            ESP_LOGW(TAG, "WiFi 重连 (%d/%d)", s_retry, MAX_RETRY);
+            ESP_LOGW(TAG, "WiFi reconnecting (%d/%d)", s_retry, MAX_RETRY);
         } else {
-            xEventGroupSetBits(s_wifi_eg, WIFI_FAIL_BIT);
-            ESP_LOGE(TAG, "WiFi 连接失败");
+            ESP_LOGW(TAG, "WiFi retry exhausted, will retry in 30s");
+            s_retry = 0;
+            esp_wifi_connect();
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
@@ -180,11 +181,11 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
         wifi_config_t wifi_cfg;
         esp_wifi_get_config(WIFI_IF_STA, &wifi_cfg);
 
-        ESP_LOGI(TAG, "══════ WiFi 已连接 ══════");
+        ESP_LOGI(TAG, "══════ WiFi Connected ══════");
         ESP_LOGI(TAG, "  SSID:    %s", wifi_cfg.sta.ssid);
         ESP_LOGI(TAG, "  IP:      " IPSTR, IP2STR(&ev->ip_info.ip));
-        ESP_LOGI(TAG, "  掩码:    " IPSTR, IP2STR(&ev->ip_info.netmask));
-        ESP_LOGI(TAG, "  网关:    " IPSTR, IP2STR(&ev->ip_info.gw));
+        ESP_LOGI(TAG, "  Netmask: " IPSTR, IP2STR(&ev->ip_info.netmask));
+        ESP_LOGI(TAG, "  Gateway: " IPSTR, IP2STR(&ev->ip_info.gw));
         ESP_LOGI(TAG, "══════════════════════════");
 
         trans2cloud_updateWifiSSID((const char *)wifi_cfg.sta.ssid);
@@ -204,7 +205,7 @@ static void key0MonitorTask(void *arg)
         if (pressed) {
             press_ms += KEY0_POLL_MS;
             if (press_ms >= KEY0_LONG_PRESS_MS) {
-                ESP_LOGW(TAG, "KEY0 长按 %"PRIu32"ms，清除凭证并重启", press_ms);
+                ESP_LOGW(TAG, "KEY0 long press %"PRIu32"ms, clear credentials and restart", press_ms);
                 size_t len = start_connect_wav_end - start_connect_wav_start;
                 wavPlayer_play(start_connect_wav_start, len);
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -229,7 +230,7 @@ bool wifiConnect_isProvisioned(void)
 
 esp_err_t wifiConnect_clearCredentials(void)
 {
-    ESP_LOGI(TAG, "清除 WiFi 凭证");
+    ESP_LOGI(TAG, "Clear WiFi credentials");
     return network_prov_mgr_reset_wifi_provisioning();
 }
 
@@ -241,47 +242,47 @@ esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
         nvs_flash_erase();
         ret = nvs_flash_init();
     }
-    ESP_RETURN_ON_ERROR(ret, TAG, "NVS 初始化失败");
+    ESP_RETURN_ON_ERROR(ret, TAG, "NVS init failed");
 
     /* 2. XL9555 + KEY0 长按监测 */
     if (!bus) {
-        ESP_LOGW(TAG, "I2C bus 为空，跳过 XL9555 KEY0 监测");
+        ESP_LOGW(TAG, "I2C bus NULL, skip XL9555 KEY0 monitoring");
     } else if (xl9555Driver_init(bus) != ESP_OK) {
-        ESP_LOGW(TAG, "XL9555 初始化失败，KEY0 长按功能不可用");
+        ESP_LOGW(TAG, "XL9555 init failed, KEY0 long press unavailable");
     } else {
         xTaskCreate(key0MonitorTask, "key0_mon", 2048, NULL, 2, NULL);
     }
 
     /* 3. 网络栈初始化 */
     s_wifi_eg = xEventGroupCreate();
-    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "netif 初始化失败");
-    ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "事件循环创建失败");
+    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "netif init failed");
+    ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "Event loop creation failed");
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_RETURN_ON_ERROR(esp_wifi_init(&wifi_cfg), TAG, "WiFi 初始化失败");
+    ESP_RETURN_ON_ERROR(esp_wifi_init(&wifi_cfg), TAG, "WiFi init failed");
 
-    /* 4. 注册事件处理器 */
+    /* 4. Register event handlers */
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(NETWORK_PROV_EVENT, ESP_EVENT_ANY_ID,
                                    provEventHandler, NULL),
-        TAG, "注册 NETWORK_PROV 事件失败");
+        TAG, "Register NETWORK_PROV event failed");
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(PROTOCOMM_TRANSPORT_BLE_EVENT, ESP_EVENT_ANY_ID,
                                    provEventHandler, NULL),
-        TAG, "注册 BLE 事件失败");
+        TAG, "Register BLE event failed");
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(PROTOCOMM_SECURITY_SESSION_EVENT, ESP_EVENT_ANY_ID,
                                    provEventHandler, NULL),
-        TAG, "注册安全事件失败");
+        TAG, "Register security event failed");
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                    wifiEventHandler, NULL),
-        TAG, "注册 WiFi 事件失败");
+        TAG, "Register WiFi event failed");
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                    wifiEventHandler, NULL),
-        TAG, "注册 IP 事件失败");
+        TAG, "Register IP event failed");
 
     /* 5. 初始化配网管理器 */
     network_prov_mgr_config_t prov_cfg = {
@@ -289,37 +290,35 @@ esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
         .scheme_event_handler = NETWORK_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM,
         .app_event_handler = NETWORK_PROV_EVENT_HANDLER_NONE,
     };
-    ESP_RETURN_ON_ERROR(network_prov_mgr_init(prov_cfg), TAG, "配网管理器初始化失败");
+    ESP_RETURN_ON_ERROR(network_prov_mgr_init(prov_cfg), TAG, "Provisioning manager init failed");
 
     /* 6. 检查是否已配网 */
     bool provisioned = false;
     network_prov_mgr_is_wifi_provisioned(&provisioned);
 
     if (provisioned) {
-        ESP_LOGI(TAG, "已有凭证，直连 WiFi...");
+        ESP_LOGI(TAG, "Already provisioned, connecting WiFi directly...");
         network_prov_mgr_deinit();
 
-        ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "WiFi 模式设置失败");
-        ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "WiFi 启动失败");
+        ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "WiFi mode set failed");
+        ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "WiFi start failed");
 
         EventBits_t bits = xEventGroupWaitBits(s_wifi_eg,
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE,
             pdMS_TO_TICKS(15000));
 
         if (bits & WIFI_CONNECTED_BIT) {
-            ESP_LOGI(TAG, "WiFi 连接成功");
+            ESP_LOGI(TAG, "WiFi connected successfully");
             return ESP_OK;
         }
 
-        ESP_LOGW(TAG, "WiFi 直连失败，清除凭证进入 BLE 配网");
-        network_prov_mgr_reset_wifi_provisioning();
-        esp_restart();
+        ESP_LOGW(TAG, "WiFi direct connection failed (%d retries), will keep retrying", s_retry);
     }
 
     /* 7. 启动 BLE 配网 (Security 2) */
     char service_name[16];
     getDeviceServiceName(service_name, sizeof(service_name));
-    ESP_LOGI(TAG, "启动 BLE 配网 — 服务名: %s (Security 2)", service_name);
+    ESP_LOGI(TAG, "Starting BLE provisioning — service name: %s (Security 2)", service_name);
 
     network_prov_security2_params_t sec2_params = {
         .salt      = s_sec2_salt,
@@ -333,7 +332,7 @@ esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
                                             &sec2_params,
                                             service_name,
                                             NULL),
-        TAG, "BLE 配网启动失败");
+        TAG, "BLE provisioning start failed");
 
     return ESP_OK;
 }
