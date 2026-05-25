@@ -25,6 +25,7 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 
 #include "network_provisioning/manager.h"
@@ -162,6 +163,14 @@ static void provEventHandler(void *arg, esp_event_base_t base,
     }
 }
 
+static esp_timer_handle_t s_retry_timer = NULL;
+
+static void wifiSlowRetryCB(void *arg)
+{
+    s_retry = 0;
+    esp_wifi_connect();
+}
+
 static void wifiEventHandler(void *arg, esp_event_base_t base,
                               int32_t id, void *data)
 {
@@ -174,8 +183,14 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
             ESP_LOGW(TAG, "WiFi reconnecting (%d/%d)", s_retry, MAX_RETRY);
         } else {
             ESP_LOGW(TAG, "WiFi retry exhausted, will retry in 30s");
-            s_retry = 0;
-            esp_wifi_connect();
+            if (!s_retry_timer) {
+                const esp_timer_create_args_t tcfg = {
+                    .callback = wifiSlowRetryCB,
+                    .name = "wifi_slow",
+                };
+                esp_timer_create(&tcfg, &s_retry_timer);
+            }
+            esp_timer_start_once(s_retry_timer, 30 * 1000 * 1000);
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
