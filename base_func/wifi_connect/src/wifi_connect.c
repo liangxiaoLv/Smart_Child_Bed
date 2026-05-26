@@ -41,8 +41,10 @@ static const char *TAG = "wifi_connect";
 extern const uint8_t start_connect_wav_start[] asm("_binary_start_connect_wav_start");
 extern const uint8_t start_connect_wav_end[]   asm("_binary_start_connect_wav_end");
 
+// 手机端作为参考，未使用
 #define PROV_SEC2_USERNAME    "wifiprov"
 #define PROV_SEC2_PWD         "abcd1234"
+
 #define PROV_SERVICE_PREFIX   "PROV_"
 #define KEY0_LONG_PRESS_MS    3000
 #define KEY0_POLL_MS          50
@@ -93,12 +95,10 @@ static int s_retry = 0;
 
 static void getDeviceServiceName(char *name, size_t max)
 {
-    // uint8_t mac[6];
-    // esp_read_mac(mac, ESP_MAC_WIFI_STA);
-    // snprintf(name, max, "%s%02X%02X%02X",
-    //          PROV_SERVICE_PREFIX, mac[3], mac[4], mac[5]);
-    snprintf(name, max, "%s%s",
-             PROV_SERVICE_PREFIX, "yinta_bed");
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(name, max, "%s%02X%02X%02X",
+             PROV_SERVICE_PREFIX, mac[3], mac[4], mac[5]);
 }
 
 /* ─── 事件处理 ─────────────────────────────────────────────── */
@@ -225,7 +225,9 @@ static void key0MonitorTask(void *arg)
                 ESP_LOGW(TAG, "KEY0 long press %"PRIu32"ms, clear credentials and restart", press_ms);
                 size_t len = start_connect_wav_end - start_connect_wav_start;
                 wavPlayer_play(start_connect_wav_start, len);
-                vTaskDelay(pdMS_TO_TICKS(500));
+                while (wavPlayer_isPlaying()) {
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                }
                 network_prov_mgr_reset_wifi_provisioning();
                 esp_restart();
             }
@@ -316,6 +318,9 @@ esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
     if (provisioned) {
         ESP_LOGI(TAG, "Already provisioned, connecting WiFi directly...");
         network_prov_mgr_deinit();
+        esp_event_handler_unregister(NETWORK_PROV_EVENT, ESP_EVENT_ANY_ID, provEventHandler);
+        esp_event_handler_unregister(PROTOCOMM_TRANSPORT_BLE_EVENT, ESP_EVENT_ANY_ID, provEventHandler);
+        esp_event_handler_unregister(PROTOCOMM_SECURITY_SESSION_EVENT, ESP_EVENT_ANY_ID, provEventHandler);
 
         ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "WiFi mode set failed");
         ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "WiFi start failed");
