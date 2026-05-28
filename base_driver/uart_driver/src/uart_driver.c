@@ -15,7 +15,7 @@ esp_err_t uartDriver_init(int uart_num, int tx_pin, int rx_pin, int baud_rate, i
         .source_clk = UART_SCLK_DEFAULT,
     };
 
-    esp_err_t ret = uart_driver_install(uart_num, rx_buf_size, 0, 0, NULL, 0);
+    esp_err_t ret = uart_driver_install(uart_num, rx_buf_size, 256, 0, NULL, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "UART%d 驱动安装失败: %s", uart_num, esp_err_to_name(ret));
         return ret;

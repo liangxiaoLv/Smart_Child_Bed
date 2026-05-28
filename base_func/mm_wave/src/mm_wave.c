@@ -5,9 +5,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "driver/uart.h"
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <time.h>
 
 static const char *TAG = "mm_wave";
 
@@ -28,7 +29,7 @@ static uint16_t s_len;
 static uint16_t s_data_pos;
 static uint8_t s_data[512];
 
-/* ── 校验和 ──────────────────────────────────────────────────── */
+/* ── 校验和：Cmd + Len_H + Len_L + 数据段，取低8位 ──────────── */
 static uint8_t calcChecksum(uint8_t cmd, uint16_t len, const uint8_t *data)
 {
     uint32_t sum = cmd + ((len >> 8) & 0xFF) + (len & 0xFF);
@@ -38,49 +39,130 @@ static uint8_t calcChecksum(uint8_t cmd, uint16_t len, const uint8_t *data)
     return (uint8_t)(sum & 0xFF);
 }
 
+/* ── 5秒发送间隔保护（模组每周期只响应第一条指令）───────────── */
+static int64_t s_last_send_us = 0;
+static int64_t s_last_auto_reply_us = 0;  /* 自动应答也限频，防止乒乓死锁 */
+
+static bool cmdIntervalOk(void)
+{
+    int64_t now = esp_timer_get_time();
+    if (s_last_send_us != 0 && (now - s_last_send_us) < 5000000) {
+        int64_t remain = 5 - (now - s_last_send_us) / 1000000;
+        ESP_LOGW(TAG, "指令过于频繁，请%lld秒后再试", remain);
+        return false;
+    }
+    s_last_send_us = now;
+    return true;
+}
+
 /* ── 帧处理 ──────────────────────────────────────────────────── */
 static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
 {
     switch (cmd) {
-    case 0x01:  /* 版本信息 */
+    case 0x01:  /* 软硬件版本号 */
         if (len >= 6) {
-            ESP_LOGI(TAG, "版本信息: 软件 v%d.%d.%d  硬件 v%d.%d.%d",
+            ESP_LOGI(TAG, "版本: SW v%d.%d.%d  HW v%d.%d.%d",
                      data[0], data[1], data[2],
                      data[3], data[4], data[5]);
         }
         break;
 
-    case 0x02:  /* 实时生命体征 (4 字节) */
+    case 0x02:  /* 心跳包 / 实时数据包 (5字节, 5秒周期) */
+        if (len >= 5) {
+            const char *person;
+            switch (data[0]) {
+            case 0: person = "无人";   break;
+            case 1: person = "有人";   break;
+            case 2: person = "干扰";   break;
+            default: person = "未知";  break;
+            }
+
+            const char *motion;
+            switch (data[3]) {
+            case 0: motion = "无体动"; break;
+            case 1: motion = "小体动"; break;
+            case 2: motion = "大体动"; break;
+            default: motion = "未知";  break;
+            }
+
+            const char *modStatus;
+            switch (data[4]) {
+            case 0: modStatus = "未监测(无报告)"; break;
+            case 1: modStatus = "监测中";         break;
+            case 2: modStatus = "未监测(有报告)"; break;
+            case 3: modStatus = "等待时间输入";   break;
+            default: modStatus = "未知";          break;
+            }
+
+            ESP_LOGI(TAG, "体征: %s | 呼吸 %d | 心率 %d | %s | 状态:%s",
+                     person, data[1], data[2], motion, modStatus);
+
+            // trans2cloud_updateRadar(data[0] == 1, data[1], data[2],
+            //                         data[3] != 0);
+        }
+        break;
+
+    case 0x03:
+        if (len == 0) {
+            /* 自动应答也限频：最少间隔 5 秒，防止乒乓死锁 */
+            int64_t now_us = esp_timer_get_time();
+            if (s_last_auto_reply_us != 0 && (now_us - s_last_auto_reply_us) < 5000000) {
+                ESP_LOGW(TAG, "自动应答过于频繁，跳过（距上次仅 %lld 秒）",
+                         (now_us - s_last_auto_reply_us) / 1000000);
+                break;
+            }
+            s_last_auto_reply_us = now_us;
+
+            ESP_LOGI(TAG, "模组请求绝对时间，自动应答");
+            time_t now;
+            time(&now);
+            struct tm ti;
+            localtime_r(&now, &ti);
+            uint16_t y = ti.tm_year + 1900;
+            uint8_t time_cmd[] = {
+                0xAA, 0x55, 0x03,
+                0x00, 0x06,
+                (y >> 8) & 0xFF, y & 0xFF,
+                ti.tm_mon + 1, ti.tm_mday,
+                ti.tm_hour, ti.tm_min,
+                0x00  /* CRC placeholder */
+            };
+            time_cmd[sizeof(time_cmd) - 1] = calcChecksum(0x03, 6, time_cmd + 5);
+            mmWave_send(time_cmd, sizeof(time_cmd));
+        } else if (len >= 1) {
+            ESP_LOGI(TAG, "时间设置应答: %s", data[0] ? "成功" : "失败(格式错误或未开始记录?)");
+        }
+        break;
+
+    case 0x04:  /* 设备ID */
         if (len >= 4) {
-            const char *person = data[0] ? "有人" : "无人";
-            const char *move  = data[3] ? "发生体动" : "未发生体动";
-            ESP_LOGI(TAG, "生命体征: %s | 呼吸率 %d | 心率 %d | %s",
-                     person, data[1], data[2], move);
-            /* 同步到云端上报模块 */
-            trans2cloud_updateRadar(data[0] != 0, data[1], data[2], data[3] != 0);
+            uint32_t dev_id = ((uint32_t)data[0] << 24) |
+                              ((uint32_t)data[1] << 16) |
+                              ((uint32_t)data[2] << 8) |
+                              data[3];
+            ESP_LOGI(TAG, "设备ID: %lu (0x%08lX)", dev_id, dev_id);
         }
         break;
 
-    case 0x03:  /* 时间设置响应 */
+    case 0x05:  /* 开始记录睡眠数据应答 */
         if (len >= 1) {
-            ESP_LOGI(TAG, "时间设置: %s", data[0] ? "成功" : "失败");
+            ESP_LOGI(TAG, "睡眠监测: %s",
+                     data[0] ? "开始记录" : "失败(已在记录中?)");
         }
         break;
 
-    case 0x05:  /* 睡眠监测开始响应 */
+    case 0x06:  /* 结束记录睡眠数据应答 */
         if (len >= 1) {
-            ESP_LOGI(TAG, "睡眠监测: %s", data[0] ? "开始记录" : "失败");
+            ESP_LOGI(TAG, "睡眠记录: %s",
+                     data[0] ? "已结束" : "失败(未开启或无有效时间?)");
         }
         break;
 
-    case 0x06:  /* 睡眠监测结束响应 */
-        if (len >= 1) {
-            ESP_LOGI(TAG, "睡眠记录: %s", data[0] ? "结束" : "失败");
-        }
-        break;
+    case 0x07:  /* 睡眠报告 (32字节) */
+        if (len == 32) {
+            ESP_LOGI(TAG, "══════ 睡眠报告 原始数据 ══════");
+            ESP_LOG_BUFFER_HEX(TAG, data, len);
 
-    case 0x07:  /* 睡眠报告数值 (42 字节) */
-        if (len >= 42) {
             uint16_t bed_y   = (data[0] << 8) | data[1];
             uint16_t up_y    = (data[6] << 8) | data[7];
             uint16_t sleep_y = (data[12] << 8) | data[13];
@@ -93,41 +175,23 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
             ESP_LOGI(TAG, "入睡: %04d/%02d/%02d %02d:%02d  醒来: %04d/%02d/%02d %02d:%02d",
                      sleep_y, data[14], data[15], data[16], data[17],
                      wake_y, data[20], data[21], data[22], data[23]);
-            ESP_LOGI(TAG, "卧床 %d分 | 离床 %d次 | 睡眠 %d分 | 清醒 %d分 | 浅睡 %d分 | 深睡 %d分",
-                     data[25], data[27], data[28], data[30], data[32], data[34]);
-            ESP_LOGI(TAG, "呼吸暂停 %d次 | 最长 %d秒 | 平均 %d秒",
-                     data[36], data[37], data[38]);
-            ESP_LOGI(TAG, "睡眠评分 %d | 呼吸评分 %d | HRV %dms",
-                     data[39], data[40], data[41]);
-        }
-        break;
 
-    case 0x08:  /* 睡眠分期数据 */
-        if (len >= 1) {
-            char stages[256] = {0};
-            int pos = 0;
-            for (uint16_t i = 0; i < len && pos < (int)sizeof(stages) - 12; i++) {
-                const char *s;
-                switch (data[i]) {
-                case 0: s = "醒"; break;
-                case 1: s = "浅睡"; break;
-                case 2: s = "深睡"; break;
-                case 3: s = "REM"; break;
-                default: s = "?"; break;
-                }
-                pos += snprintf(stages + pos, sizeof(stages) - pos, "%s ", s);
-            }
-            ESP_LOGI(TAG, "睡眠分期(%d分钟): %s", len, stages);
+            uint16_t bed_mins   = (data[24] << 8) | data[25];
+            uint16_t sleep_mins = (data[26] << 8) | data[27];
+            uint16_t awake_mins = (data[28] << 8) | data[29];
+            uint16_t move_cnt   = (data[30] << 8) | data[31];
+
+            ESP_LOGI(TAG, "卧床 %d分 | 睡眠 %d分 | 清醒 %d分 | 体动 %d次",
+                     bed_mins, sleep_mins, awake_mins, move_cnt);
+        } else if (len == 1) {
+            ESP_LOGI(TAG, "睡眠报告: %s",
+                     data[0] ? "有数据" : "无有效睡眠数据(未结束或未监测到有效睡眠)");
         }
         break;
 
     default: {
-        char hex[256];
-        int pos = 0;
-        for (uint16_t i = 0; i < len && pos < (int)sizeof(hex) - 4; i++) {
-            pos += snprintf(hex + pos, sizeof(hex) - pos, "%02X ", data[i]);
-        }
-        ESP_LOGI(TAG, "未知帧 CMD=0x%02X 数据: %s", cmd, hex);
+        ESP_LOGI(TAG, "未知帧 CMD=0x%02X len=%d 数据:", cmd, len);
+        ESP_LOG_BUFFER_HEX(TAG, data, len);
         break;
     }
     }
@@ -196,6 +260,7 @@ static void mmWaveTask(void *arg)
             for (int i = 0; i < len; i++) {
                 parserFeed(buf[i]);
             }
+            vTaskDelay(1);   /* 让出 CPU 给 console task */
         } else {
             vTaskDelay(pdMS_TO_TICKS(50));
         }
@@ -203,39 +268,74 @@ static void mmWaveTask(void *arg)
 }
 
 /* ── 控制台交互任务 ──────────────────────────────────────────── */
+#define SHELL_UART      1
+#define SHELL_TX_PIN    GPIO_NUM_6
+#define SHELL_RX_PIN    GPIO_NUM_7
+#define SHELL_BAUD      115200
+
+static void shellWrite(const char *s)
+{
+    uart_write_bytes(SHELL_UART, s, strlen(s));
+}
+
 static void mmWaveConsoleTask(void *arg)
 {
-    printf("\n========== 毫米波雷达交互菜单 ==========\n");
-    printf("1 - 查询版本\n");
-    printf("2 - 开始睡眠监测\n");
-    printf("3 - 结束睡眠记录\n");
-    printf("4 - 查询睡眠报告\n");
-    printf("5 - 查询睡眠分期\n");
-    printf("6 - 设置时间\n");
-    printf("=========================================\n");
-    printf("请按键选择: ");
-    fflush(stdout);
+    /* 安装 UART1 驱动（独立于 UART0 控制台，不冲突） */
+    uart_config_t cfg = {
+        .baud_rate  = SHELL_BAUD,
+        .data_bits  = UART_DATA_8_BITS,
+        .parity     = UART_PARITY_DISABLE,
+        .stop_bits  = UART_STOP_BITS_1,
+        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    uart_driver_install(SHELL_UART, 256, 256, 0, NULL, 0);
+    uart_param_config(SHELL_UART, &cfg);
+    uart_set_pin(SHELL_UART, SHELL_TX_PIN, SHELL_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
-    char buf[16];
+    shellWrite("\n========== 毫米波雷达交互菜单 ==========\n");
+    shellWrite("1 - 查询版本\n");
+    shellWrite("2 - 开始睡眠监测\n");
+    shellWrite("3 - 结束睡眠记录\n");
+    shellWrite("4 - 查询睡眠报告\n");
+    shellWrite("5 - 查询设备ID\n");
+    shellWrite("6 - 设置时间\n");
+    shellWrite("=========================================\n");
+    shellWrite("请输入数字键: ");
+
+    char buf[8];
+    int  pos = 0;
+
     for (;;) {
-        if (fgets(buf, sizeof(buf), stdin) != NULL) {
-            int key = atoi(buf);
-            switch (key) {
-            case 1: mmWave_queryVersion();      break;
-            case 2: mmWave_startSleep();        break;
-            case 3: mmWave_endSleep();          break;
-            case 4: mmWave_querySleepReport();  break;
-            case 5: mmWave_querySleepStage();   break;
-            case 6: mmWave_setTime(2026, 5, 11, 12, 0); break;
-            default:
-                printf("无效按键，请重试: ");
-                fflush(stdout);
-                continue;
+        uint8_t ch;
+        int n = uart_read_bytes(SHELL_UART, &ch, 1, pdMS_TO_TICKS(200));
+
+        if (n == 1) {
+            if (ch == '\r' || ch == '\n') {
+                if (pos > 0) {
+                    buf[pos] = '\0';
+                    pos = 0;
+                    int key = buf[0] - '0';
+
+                    switch (key) {
+                    case 1: mmWave_queryVersion();      break;
+                    case 2: mmWave_startSleep();        break;
+                    case 3: mmWave_endSleep();          break;
+                    case 4: mmWave_querySleepReport();  break;
+                    case 5: mmWave_queryDeviceId();     break;
+                    case 6: mmWave_setTime(2026, 5, 11, 12, 0); break;
+                    default:
+                        shellWrite("\n无效按键，请重试: ");
+                        continue;
+                    }
+                    shellWrite("\n命令已发送\n请输入数字键: ");
+                }
+            } else if (ch >= '1' && ch <= '6' && pos == 0) {
+                buf[pos++] = (char)ch;
+                uart_write_bytes(SHELL_UART, &ch, 1);  /* 回显 */
             }
-            printf("命令已发送\n请按键选择: ");
-            fflush(stdout);
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -251,7 +351,7 @@ esp_err_t mm_wave_radar_info(void)
         return ret;
     }
 
-    xTaskCreate(mmWaveTask, "mm_wave", 3072, NULL, 3, NULL);
+    xTaskCreate(mmWaveTask, "mm_wave", 3072, NULL, 1, NULL);
     ESP_LOGI(TAG, "雷达接收任务已启动");
 
     xTaskCreate(mmWaveConsoleTask, "mm_console", 3072, NULL, 2, NULL);
@@ -267,42 +367,55 @@ esp_err_t mmWave_send(const uint8_t *data, size_t len)
 
 esp_err_t mmWave_queryVersion(void)
 {
-    uint8_t cmd[] = { 0xAA, 0x55, 0x01 };
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
+    uint8_t cmd[] = { 0xAA, 0x55, 0x01, 0x00, 0x00, 0x00 };
+    cmd[5] = calcChecksum(0x01, 0, NULL);
+    return mmWave_send(cmd, sizeof(cmd));
+}
+
+esp_err_t mmWave_queryDeviceId(void)
+{
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
+    uint8_t cmd[] = { 0xAA, 0x55, 0x04, 0x00, 0x00, 0x00 };
+    cmd[5] = calcChecksum(0x04, 0, NULL);
     return mmWave_send(cmd, sizeof(cmd));
 }
 
 esp_err_t mmWave_startSleep(void)
 {
-    uint8_t cmd[] = { 0xAA, 0x55, 0x05 };
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
+    uint8_t cmd[] = { 0xAA, 0x55, 0x05, 0x00, 0x00, 0x00 };
+    cmd[5] = calcChecksum(0x05, 0, NULL);
     return mmWave_send(cmd, sizeof(cmd));
 }
 
 esp_err_t mmWave_endSleep(void)
 {
-    uint8_t cmd[] = { 0xAA, 0x55, 0x06 };
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
+    uint8_t cmd[] = { 0xAA, 0x55, 0x06, 0x00, 0x00, 0x00 };
+    cmd[5] = calcChecksum(0x06, 0, NULL);
     return mmWave_send(cmd, sizeof(cmd));
 }
 
 esp_err_t mmWave_querySleepReport(void)
 {
-    uint8_t cmd[] = { 0xAA, 0x55, 0x07 };
-    return mmWave_send(cmd, sizeof(cmd));
-}
-
-esp_err_t mmWave_querySleepStage(void)
-{
-    uint8_t cmd[] = { 0xAA, 0x55, 0x08 };
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
+    uint8_t cmd[] = { 0xAA, 0x55, 0x07, 0x00, 0x00, 0x00 };
+    cmd[5] = calcChecksum(0x07, 0, NULL);
     return mmWave_send(cmd, sizeof(cmd));
 }
 
 esp_err_t mmWave_setTime(uint16_t year, uint8_t month, uint8_t day,
                          uint8_t hour, uint8_t minute)
 {
+    if (!cmdIntervalOk()) return ESP_ERR_INVALID_STATE;
     uint8_t cmd[] = {
         0xAA, 0x55, 0x03,
         0x00, 0x06,
         (year >> 8) & 0xFF, year & 0xFF,
-        month, day, hour, minute
+        month, day, hour, minute,
+        0x00  /* CRC placeholder */
     };
+    cmd[sizeof(cmd) - 1] = calcChecksum(0x03, 6, cmd + 5);
     return mmWave_send(cmd, sizeof(cmd));
 }
