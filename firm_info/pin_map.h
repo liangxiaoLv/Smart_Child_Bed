@@ -65,6 +65,16 @@
 #define RADAR_RX_BUF_SIZE   2048            /* 雷达 UART RX 缓冲区 */
 
 /* ═══════════════════════════════════════════════════════════════
+ * BCG 睡眠监护仪 — UART2
+ * 与毫米波雷达共用 UART2，TX/RX 交叉连接
+ * ═══════════════════════════════════════════════════════════════ */
+#define BCG_UART_NUM        2               /* BCG 使用 UART2 */
+#define BCG_RX_PIN          GPIO_NUM_5      /* ESP32 RX ← BCG_TX (IO5) */
+#define BCG_TX_PIN          GPIO_NUM_4      /* ESP32 TX → BCG_RX (IO4) */
+#define BCG_BAUD_RATE       115200          /* BCG 串口波特率 */
+#define BCG_RX_BUF_SIZE     4096            /* BCG UART RX 缓冲区 (AD 采样帧最大 ~1025B) */
+
+/* ═══════════════════════════════════════════════════════════════
  * 红外体温传感器 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
