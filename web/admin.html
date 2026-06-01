@@ -9,21 +9,24 @@
         body { font-family: 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
         header { background: #16213e; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 20px; color: #e94560; }
-        .conn-status { font-size: 13px; padding: 4px 12px; border-radius: 12px; }
+        .conn-status { font-size: 13px; padding: 4px 12px; border-radius: 12px; white-space: nowrap; }
         .conn-status.online { background: #1a8a1a; }
         .conn-status.offline { background: #8a1a1a; }
-        main { max-width: 600px; margin: 24px auto; padding: 0 16px; }
-        .panel { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .panel h2 { font-size: 16px; margin-bottom: 16px; color: #e94560; }
-        .btn { display: inline-block; padding: 12px 28px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 6px; transition: all .2s; }
-        .btn:hover { opacity: .85; transform: translateY(-1px); }
+        main { max-width: 500px; margin: 24px auto; padding: 0 16px; }
+        .panel { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .panel h2 { font-size: 16px; margin-bottom: 20px; color: #e94560; display: flex; align-items: center; gap: 8px; }
+        .panel h2 .icon { font-size: 20px; }
+        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn { flex: 1; min-width: 120px; padding: 14px 20px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; transition: all .2s; font-weight: 600; text-align: center; }
+        .btn:hover { opacity: .85; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+        .btn:active { transform: translateY(0); }
         .btn-sleep { background: #7b68ee; color: #fff; }
         .btn-wake  { background: #ffa500; color: #fff; }
-        .btn-cry   { background: #e94560; color: #fff; }
-        .btn-feed  { background: #2ecc71; color: #fff; }
-        .btn-story { background: #3498db; color: #fff; }
-        .log-panel { max-width: 600px; margin: 0 auto; padding: 0 16px 24px; }
-        .log-panel h3 { margin-bottom: 8px; }
+        .btn-warn { background: #555; color: #fff; min-width: 100%; }
+        .btn-warn.on { background: #e74c3c; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(231,76,60,.4); } 50% { box-shadow: 0 0 0 8px rgba(231,76,60,0); } }
+        .log-panel { max-width: 500px; margin: 0 auto; padding: 0 16px 24px; }
+        .log-panel h3 { margin-bottom: 8px; font-size: 14px; color: #aaa; }
         #log-list { background: #0f0f23; border-radius: 8px; padding: 12px; max-height: 300px; overflow-y: auto; font-size: 13px; font-family: Consolas, monospace; }
         #log-list div { padding: 4px 0; border-bottom: 1px solid #1a1a3e; }
         .log-time { color: #888; margin-right: 8px; }
@@ -39,12 +42,18 @@
 
     <main>
         <section class="panel">
-            <h2>场景模拟</h2>
-            <button class="btn btn-sleep" onclick="sendCmd('sleep', 1)">😴 睡着</button>
-            <button class="btn btn-wake"  onclick="sendCmd('sleep', 0)">🔔 醒来</button>
-            <button class="btn btn-cry"   onclick="sendCmd('cry', 1)">😢 哭闹</button>
-            <button class="btn btn-feed"  onclick="sendCmd('feed', 1)">🍼 喂奶提醒</button>
-            <button class="btn btn-story" onclick="sendCmd('story', 1)">📖 播放故事</button>
+            <h2><span class="icon">🛏️</span> 场景模拟</h2>
+            <div class="btn-row">
+                <button class="btn btn-sleep" onclick="sendCmd('sleep', 1)">😴 睡着</button>
+                <button class="btn btn-wake"  onclick="sendCmd('sleep', 0)">🔔 醒来</button>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2><span class="icon">📡</span> 基站控制</h2>
+            <div class="btn-row">
+                <button class="btn btn-warn" id="btn-warn" onclick="toggleWarning()">⚠ 发出提醒</button>
+            </div>
         </section>
     </main>
 
@@ -87,6 +96,31 @@
             }
         }
 
+        function sendStationCmd(cmd, value) {
+            const msg = JSON.stringify({ topic: 'station/control', payload: JSON.stringify({ cmd: cmd, value: value }) });
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(msg);
+                addLog('发送 → station/control: ' + cmd + '=' + value, 'log-tx');
+            } else {
+                addLog('发送失败: 未连接', 'log-tx');
+            }
+        }
+
+        let warningOn = false;
+        function toggleWarning() {
+            warningOn = !warningOn;
+            const btn = document.getElementById('btn-warn');
+            if (warningOn) {
+                btn.innerHTML = '⚠ 取消提醒';
+                btn.className = 'btn btn-warn on';
+                sendStationCmd('warning', 1);
+            } else {
+                btn.innerHTML = '⚠ 发出提醒';
+                btn.className = 'btn btn-warn';
+                sendStationCmd('warning', 0);
+            }
+        }
+
         function connect() {
             if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
             addLog('正在连接...', 'log-rx');
@@ -95,33 +129,9 @@
             ws.onopen = function () {
                 setStatus(true);
                 addLog('已连接到服务器', 'log-rx');
-                // 订阅话题
-                ws.send(JSON.stringify({ topic: 'bed/status', payload: '' }));
-                ws.send(JSON.stringify({ topic: 'bed/heartbeat', payload: '' }));
-                addLog('已订阅 bed/status, bed/heartbeat', 'log-rx');
             };
 
-            ws.onmessage = function (e) {
-                try {
-                    const msg = JSON.parse(e.data);
-                    const topic = msg.topic || '';
-                    const payload = msg.payload || '';
-                    if (topic === 'bed/status') {
-                        try {
-                            const data = JSON.parse(payload);
-                            addLog('状态: 温度' + data.env_temp + '°C 湿度' + data.env_hum + '% AQI' + data.aqi + ' 心率' + data.heart + ' 呼吸' + data.breath, 'log-rx');
-                        } catch (ex) {
-                            addLog('[' + topic + '] ' + payload, 'log-rx');
-                        }
-                    } else if (topic === 'bed/heartbeat') {
-                        addLog('心跳: 设备在线', 'log-rx');
-                    } else {
-                        addLog('[' + topic + '] ' + payload, 'log-rx');
-                    }
-                } catch (ex) {
-                    addLog('收到: ' + e.data, 'log-rx');
-                }
-            };
+            ws.onmessage = function (e) {};
 
             ws.onerror = function () {
                 addLog('连接错误', 'log-rx');
