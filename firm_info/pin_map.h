@@ -41,11 +41,16 @@
 #define I2C1_SPEED_HZ       100000          /* I2C1 总线速率 100 kHz */
 
 /* ═══════════════════════════════════════════════════════════════
- * SPI2 — LCD 数据总线（或预留）
+ * SPI2 — LCD 数据总线 / TF 卡
+ * TF 卡与 LCD 共用 SPI2，通过 CS 片选区分
  * ═══════════════════════════════════════════════════════════════ */
 #define SPI2_MOSI_PIN       GPIO_NUM_11     /* SPI2 主出从入 */
 #define SPI2_CLK_PIN        GPIO_NUM_12     /* SPI2 时钟 */
 #define SPI2_MISO_PIN       GPIO_NUM_13     /* SPI2 主入从出 */
+#define SPI2_HOST_ID        SPI2_HOST       /* SPI2 外设 ID */
+
+/* TF 卡 — SPI2 设备 */
+#define SD_CARD_CS_PIN      GPIO_NUM_2      /* TF 卡 SPI 片选 */
 
 /* ═══════════════════════════════════════════════════════════════
  * XL9555 — IO 扩展芯片（挂载于 I2C0）
