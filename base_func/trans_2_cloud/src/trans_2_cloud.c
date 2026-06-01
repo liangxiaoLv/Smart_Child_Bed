@@ -116,7 +116,16 @@ static void onCloudCommand(const char *topic, const char *payload)
         numVal = atoi(p);
     }
 
-    if (strcmp(cmd, "led_onoff") == 0) {
+    if (strcmp(cmd, "sleep") == 0) {
+        ESP_LOGI(TAG, ">>> 收到后台场景指令：%s (value=%d) <<<",
+                 numVal ? "睡着" : "醒来", numVal);
+    } else if (strcmp(cmd, "cry") == 0) {
+        ESP_LOGI(TAG, ">>> 收到后台场景指令：哭闹 <<<");
+    } else if (strcmp(cmd, "feed") == 0) {
+        ESP_LOGI(TAG, ">>> 收到后台场景指令：喂奶提醒 <<<");
+    } else if (strcmp(cmd, "story") == 0) {
+        ESP_LOGI(TAG, ">>> 收到后台场景指令：播放故事 <<<");
+    } else if (strcmp(cmd, "led_onoff") == 0) {
         rgbLed_setOnOff(numVal != 0);
     } else if (strcmp(cmd, "led_mode") == 0) {
         /* value 是字符串，如 "rainbow" */
