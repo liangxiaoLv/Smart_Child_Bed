@@ -1,0 +1,13 @@
+# ESP32-S3 分区表 — 16MB Flash (QIO)
+#
+# 地址空间布局：
+#   0x000000 - 0x008000  32KB   Bootloader (固定)
+#   0x008000 - 0x009000   4KB   分区表 (固定)
+#   0x009000 - 0xFFFFFF        以下自定义分区
+#
+# Name,        Type, SubType, Offset,   Size,      Flags
+nvs,           data, nvs,     0x9000,   0x6000,
+phy_init,      data, phy,     0xF000,   0x1000,
+factory,       app,  factory, 0x10000,  0x400000,
+factory_nvs,   data, nvs,     0x410000, 0x10000,
+storage,       data, fat,     0x420000, 0xBE0000,
