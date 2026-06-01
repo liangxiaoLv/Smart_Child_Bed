@@ -53,7 +53,6 @@
 #define XL9555_I2C_ADDR     0x20            /* XL9555 7-bit I2C 设备地址 */
 #define XL9555_INT_PIN      GPIO_NUM_40     /* XL9555 中断输出引脚，与 GT9XX_INT / LCD_DC 复用 */
 
-
 /* ═══════════════════════════════════════════════════════════════
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用

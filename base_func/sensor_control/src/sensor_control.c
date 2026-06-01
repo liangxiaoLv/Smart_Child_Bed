@@ -25,7 +25,7 @@ static void sensorControlTask(void *arg)
 
         rgbLed_setBrightness((uint8_t)brt);
 
-        ESP_LOGI(TAG, "ALS=%5u PS=%5u IR=%5u → 亮度=%d%%", als, ps, ir, brt);
+        // ESP_LOGI(TAG, "ALS=%5u PS=%5u IR=%5u → 亮度=%d%%", als, ps, ir, brt);
         vTaskDelay(pdMS_TO_TICKS(TASK_INTERVAL_MS));
     }
 }
