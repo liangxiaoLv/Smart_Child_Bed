@@ -37,7 +37,8 @@ static const char *TAG = "wifi_connect";
 #define PROV_SERVICE_PREFIX   "PROV_"
 #define MAX_RETRY             5
 #define BOOT_BUTTON_PIN       GPIO_NUM_0       /* BOOT 按键 GPIO */
-#define BOOT_LONG_PRESS_MS    5000             /* 长按阈值 (ms) */
+#define BOOT_LONG_PRESS_MS    3000             /* 长按阈值 (ms) */
+#define STATUS_LED_PIN         GPIO_NUM_1       /* 状态 LED，低电平点亮 */
 
 /* Sec2 开发模式硬编码 salt/verifier (username="wifiprov", pwd="abcd1234")
  * 生产环境每个设备需生成唯一值，存储在出厂分区 */
@@ -88,6 +89,7 @@ static void bootBtnTimerCB(void *arg)
 {
     ESP_LOGW(TAG, "BOOT button held %dms — clearing WiFi credentials and restarting...",
              BOOT_LONG_PRESS_MS);
+    gpio_set_level(STATUS_LED_PIN, 0);  /* LED 点亮，提示进入配网 */
     wifiConnect_clearCredentials();
     vTaskDelay(pdMS_TO_TICKS(500));
     esp_restart();
@@ -128,6 +130,21 @@ static void bootBtnInit(void)
              BOOT_BUTTON_PIN, BOOT_LONG_PRESS_MS);
 }
 
+/* ─── 状态 LED (IO1, 低电平点亮) ──────────────────────────────── */
+
+static void statusLedInit(void)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = BIT64(STATUS_LED_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+    gpio_set_level(STATUS_LED_PIN, 1);  /* 默认熄灭 */
+}
+
 /* ─── 生成 BLE 设备名 ──────────────────────────────────────── */
 
 static void getDeviceServiceName(char *name, size_t max)
@@ -164,6 +181,7 @@ static void provEventHandler(void *arg, esp_event_base_t base,
         }
         case NETWORK_PROV_WIFI_CRED_SUCCESS:
             ESP_LOGI(TAG, "Provisioning success, WiFi connected");
+            gpio_set_level(STATUS_LED_PIN, 1);  /* LED 熄灭 */
             xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
             break;
         case NETWORK_PROV_END:
@@ -243,6 +261,7 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
         ESP_LOGI(TAG, "══════════════════════════");
 
         s_retry = 0;
+        gpio_set_level(STATUS_LED_PIN, 1);  /* LED 熄灭 */
         xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
     }
 }
@@ -273,6 +292,7 @@ esp_err_t wifiConnect_init(void)
     ESP_RETURN_ON_ERROR(ret, TAG, "NVS init failed");
 
     /* 1.5 启动 BOOT 按键监控 (长按清除 WiFi 凭据) */
+    statusLedInit();
     bootBtnInit();
 
     /* 2. 网络栈初始化 */
@@ -342,6 +362,7 @@ esp_err_t wifiConnect_init(void)
     }
 
     /* 6. 启动 BLE 配网 (Security 2) — 仅在未配网时执行 */
+    gpio_set_level(STATUS_LED_PIN, 0);  /* LED 点亮，指示配网中 */
     char service_name[16];
     getDeviceServiceName(service_name, sizeof(service_name));
     ESP_LOGI(TAG, "Starting BLE provisioning — service name: %s (Security 2)", service_name);
