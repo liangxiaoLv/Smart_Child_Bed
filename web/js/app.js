@@ -1,3 +1,301 @@
+/* ─── 用户认证 ──────────────────────────────────── */
+const AUTH_URL = 'http://60.205.235.150:9003';
+
+/* 页面初始化：检查登录状态 */
+function checkAuth() {
+    var token = localStorage.getItem('bed_token');
+    if (!token) {
+        showAuthOverlay('login');
+        return;
+    }
+    verifyToken(token);
+}
+
+function verifyToken(token) {
+    fetch(AUTH_URL + '/api/verify_token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            onLoginSuccess(data.username, token);
+        } else {
+            localStorage.removeItem('bed_token');
+            localStorage.removeItem('bed_username');
+            showAuthOverlay('login');
+        }
+    })
+    .catch(function() {
+        /* 网络错误时，信任本地 token 继续使用 */
+        var username = localStorage.getItem('bed_username');
+        if (username) {
+            onLoginSuccess(username, token);
+        } else {
+            showAuthOverlay('login');
+        }
+    });
+}
+
+function showAuthOverlay(mode) {
+    var overlay = document.getElementById('auth-overlay');
+    overlay.classList.remove('hidden');
+
+    /* 隐藏所有表单 */
+    document.getElementById('auth-login').classList.remove('active');
+    document.getElementById('auth-register').classList.remove('active');
+    document.getElementById('auth-chpwd').classList.remove('active');
+
+    if (mode === 'login') {
+        document.getElementById('auth-login').classList.add('active');
+    } else if (mode === 'register') {
+        document.getElementById('auth-register').classList.add('active');
+    }
+
+    /* 清空错误提示和输入 */
+    clearAuthErrors();
+}
+
+function showAuthPanel(mode) {
+    showAuthOverlay(mode);
+}
+
+function hideAuthPanel() {
+    document.getElementById('auth-overlay').classList.add('hidden');
+}
+
+function onLoginSuccess(username, token) {
+    localStorage.setItem('bed_token', token);
+    localStorage.setItem('bed_username', username);
+    hideAuthPanel();
+    updateUserUI(username);
+}
+
+function updateUserUI(username) {
+    var btn = document.getElementById('btn-user');
+    var label = document.getElementById('user-label');
+    var dropdownName = document.getElementById('dropdown-username');
+
+    if (username) {
+        label.textContent = username;
+        dropdownName.textContent = username;
+        btn.classList.add('btn-logged-in');
+    } else {
+        label.textContent = '未登录';
+        btn.classList.remove('btn-logged-in');
+    }
+}
+
+/* ─── 登录 ──────────────────────────────────────── */
+function login() {
+    var username = document.getElementById('login-username').value.trim();
+    var password = document.getElementById('login-password').value;
+    var errEl = document.getElementById('login-error');
+
+    if (!username || !password) {
+        errEl.textContent = '请输入用户名和密码';
+        errEl.className = 'auth-error';
+        return;
+    }
+
+    errEl.textContent = '登录中...';
+    errEl.className = 'auth-error';
+
+    fetch(AUTH_URL + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            onLoginSuccess(data.username, data.token);
+        } else {
+            errEl.textContent = data.message;
+            errEl.className = 'auth-error';
+        }
+    })
+    .catch(function() {
+        errEl.textContent = '网络错误，请检查网络后重试';
+        errEl.className = 'auth-error';
+    });
+}
+
+/* 登录表单回车键提交 */
+document.addEventListener('DOMContentLoaded', function() {
+    var loginPwd = document.getElementById('login-password');
+    if (loginPwd) {
+        loginPwd.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { login(); }
+        });
+    }
+    var loginName = document.getElementById('login-username');
+    if (loginName) {
+        loginName.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { login(); }
+        });
+    }
+});
+
+/* ─── 注册 ──────────────────────────────────────── */
+function register() {
+    var username = document.getElementById('reg-username').value.trim();
+    var email    = document.getElementById('reg-email').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var password2 = document.getElementById('reg-password2').value;
+    var errEl = document.getElementById('reg-error');
+
+    /* 客户端校验 */
+    if (!username) {
+        errEl.textContent = '请输入用户名';
+        errEl.className = 'auth-error'; return;
+    }
+    if (username.length < 3 || username.length > 20) {
+        errEl.textContent = '用户名需 3-20 位';
+        errEl.className = 'auth-error'; return;
+    }
+    if (password.length < 6) {
+        errEl.textContent = '密码至少 6 位';
+        errEl.className = 'auth-error'; return;
+    }
+    if (password !== password2) {
+        errEl.textContent = '两次密码输入不一致';
+        errEl.className = 'auth-error'; return;
+    }
+
+    errEl.textContent = '注册中...';
+    errEl.className = 'auth-error';
+
+    fetch(AUTH_URL + '/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password, email: email })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            errEl.textContent = data.message + '，请登录';
+            errEl.className = 'auth-error success';
+            /* 1.5 秒后自动跳转登录 */
+            setTimeout(function() { showAuthPanel('login'); }, 1500);
+        } else {
+            errEl.textContent = data.message;
+            errEl.className = 'auth-error';
+        }
+    })
+    .catch(function() {
+        errEl.textContent = '网络错误，请检查网络后重试';
+        errEl.className = 'auth-error';
+    });
+}
+
+/* ─── 修改密码 ──────────────────────────────────── */
+function showChangePassword() {
+    document.getElementById('auth-overlay').classList.remove('hidden');
+    document.getElementById('auth-login').classList.remove('active');
+    document.getElementById('auth-register').classList.remove('active');
+    document.getElementById('auth-chpwd').classList.add('active');
+    clearAuthErrors();
+    /* 清空输入 */
+    document.getElementById('chpwd-old').value = '';
+    document.getElementById('chpwd-new').value = '';
+    document.getElementById('chpwd-new2').value = '';
+}
+
+function hideChangePassword() {
+    hideAuthPanel();
+}
+
+function changePassword() {
+    var token   = localStorage.getItem('bed_token') || '';
+    var oldPwd  = document.getElementById('chpwd-old').value;
+    var newPwd  = document.getElementById('chpwd-new').value;
+    var newPwd2 = document.getElementById('chpwd-new2').value;
+    var errEl   = document.getElementById('chpwd-error');
+
+    if (!oldPwd) {
+        errEl.textContent = '请输入原密码';
+        errEl.className = 'auth-error'; return;
+    }
+    if (newPwd.length < 6) {
+        errEl.textContent = '新密码至少 6 位';
+        errEl.className = 'auth-error'; return;
+    }
+    if (newPwd !== newPwd2) {
+        errEl.textContent = '两次新密码输入不一致';
+        errEl.className = 'auth-error'; return;
+    }
+
+    errEl.textContent = '提交中...';
+    errEl.className = 'auth-error';
+
+    fetch(AUTH_URL + '/api/change_password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            token: token,
+            old_password: oldPwd,
+            new_password: newPwd
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            errEl.textContent = data.message;
+            errEl.className = 'auth-error success';
+            setTimeout(function() { hideChangePassword(); }, 1500);
+        } else {
+            errEl.textContent = data.message;
+            errEl.className = 'auth-error';
+        }
+    })
+    .catch(function() {
+        errEl.textContent = '网络错误，请检查网络后重试';
+        errEl.className = 'auth-error';
+    });
+}
+
+/* ─── 退出登录 ──────────────────────────────────── */
+function logout() {
+    localStorage.removeItem('bed_token');
+    localStorage.removeItem('bed_username');
+    updateUserUI(null);
+    showAuthOverlay('login');
+    /* 关闭下拉菜单 */
+    document.getElementById('user-dropdown').style.display = 'none';
+}
+
+/* ─── 用户菜单 ──────────────────────────────────── */
+function toggleUserMenu() {
+    if (!localStorage.getItem('bed_token')) {
+        showAuthOverlay('login');
+        return;
+    }
+    var dropdown = document.getElementById('user-dropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+/* 点击其他地方关闭菜单 */
+document.addEventListener('click', function(e) {
+    var section = document.getElementById('user-section');
+    var dropdown = document.getElementById('user-dropdown');
+    if (section && dropdown && !section.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+/* 清空所有认证错误提示和输入 */
+function clearAuthErrors() {
+    var errors = document.querySelectorAll('.auth-error');
+    errors.forEach(function(el) {
+        el.textContent = '';
+        el.className = 'auth-error';
+    });
+    var inputs = document.querySelectorAll('.auth-form input');
+    inputs.forEach(function(el) { el.value = ''; });
+}
+
 /* ─── 服务器配置 ──────────────────────────────────── */
 const WS_URL  = 'ws://60.205.235.150:9001';
 
@@ -210,4 +508,15 @@ document.getElementById('btn-refresh-audio').onclick = function() {
 /* ─── 启动 ──────────────────────────────────────── */
 updateClock();
 setInterval(updateClock, 1000);
-connect();
+
+/* 登录状态检查完成后再连接 WebSocket */
+checkAuth();
+
+/* 监听认证完成事件，auth 通过后连接 WebSocket */
+var authCheckInterval = setInterval(function() {
+    var overlay = document.getElementById('auth-overlay');
+    if (overlay && overlay.classList.contains('hidden')) {
+        clearInterval(authCheckInterval);
+        connect();
+    }
+}, 500);

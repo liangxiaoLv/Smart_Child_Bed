@@ -402,6 +402,207 @@ input[type="range"] {
     transform: scale(0.97);
 }
 
+/* ── User Section ──────────────────────── */
+.user-section {
+    position: relative;
+}
+
+.btn-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+}
+
+.btn-user:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.user-icon {
+    font-size: 16px;
+}
+
+.btn-logged-in {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 44px;
+    right: 0;
+    min-width: 150px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 0;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+
+.dropdown-username {
+    display: block;
+    padding: 6px 16px 10px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+
+.user-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.user-dropdown button:hover {
+    background: var(--bg);
+    color: var(--accent);
+}
+
+/* ── Auth Overlay ───────────────────── */
+.auth-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.70);
+    z-index: 200;
+    backdrop-filter: blur(4px);
+}
+
+.auth-overlay.hidden {
+    display: none;
+}
+
+.auth-panel {
+    width: 340px;
+    max-width: 90vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+}
+
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}
+
+.auth-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.auth-error {
+    min-height: 20px;
+    font-size: 13px;
+    color: var(--red);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.auth-error.success {
+    color: var(--green);
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    border-color: var(--accent);
+}
+
+.form-group input::placeholder {
+    color: #484f58;
+}
+
+.btn-auth-primary {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #1f6feb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s;
+    margin-top: 4px;
+}
+
+.btn-auth-primary:hover {
+    filter: brightness(1.15);
+}
+
+.btn-auth-primary:active {
+    transform: scale(0.98);
+}
+
+.auth-switch {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.auth-switch a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
 /* ── Scrollbar ──────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }

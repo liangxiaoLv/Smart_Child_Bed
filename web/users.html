@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 智能儿童床</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        header { background: #16213e; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 20px; color: #e94560; }
+        main { max-width: 700px; margin: 24px auto; padding: 0 16px; }
+        .panel { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .panel h2 { font-size: 16px; margin-bottom: 20px; color: #e94560; display: flex; align-items: center; gap: 8px; }
+        .panel h2 .icon { font-size: 20px; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .user-count { font-size: 13px; color: #8b949e; }
+        .btn-refresh { padding: 6px 14px; background: #30363d; color: #eee; border: 1px solid #484f58; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .2s; }
+        .btn-refresh:hover { background: #484f58; }
+        .user-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .user-table th { text-align: left; padding: 10px 12px; color: #8b949e; font-weight: 500; border-bottom: 1px solid #30363d; position: sticky; top: 0; background: #16213e; }
+        .user-table th:last-child { text-align: right; }
+        .user-table td { padding: 10px 12px; border-bottom: 1px solid #1a1a3e; color: #eee; }
+        .user-table td:last-child { text-align: right; color: #8b949e; }
+        .user-table tbody tr:hover { background: #1a1a3e; }
+        .empty-state { text-align: center; padding: 40px 0; color: #8b949e; font-size: 14px; }
+        .error-state { text-align: center; padding: 40px 0; color: #f85149; font-size: 14px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f23; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>👥 用户管理</h1>
+    </header>
+
+    <main>
+        <section class="panel">
+            <div class="toolbar">
+                <h2 style="margin:0;border:none;padding:0;"><span class="icon">👥</span> 注册用户</h2>
+                <button class="btn-refresh" onclick="loadUsers()">🔄 刷新</button>
+            </div>
+            <span class="user-count" id="user-count"></span>
+            <div style="max-height:500px;overflow-y:auto;margin-top:8px;">
+                <table class="user-table">
+                    <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册时间</th></tr></thead>
+                    <tbody id="user-tbody">
+                        <tr><td colspan="4"><div class="empty-state">加载中...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const AUTH_URL = 'http://60.205.235.150:9003';
+
+        function loadUsers() {
+            var tbody = document.getElementById('user-tbody');
+            var countEl = document.getElementById('user-count');
+            tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">加载中...</div></td></tr>';
+
+            fetch(AUTH_URL + '/api/users')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success) {
+                        tbody.innerHTML = '<tr><td colspan="4"><div class="error-state">加载失败</div></td></tr>';
+                        return;
+                    }
+                    countEl.textContent = '共 ' + data.total + ' 人';
+                    if (data.users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">暂无注册用户</div></td></tr>';
+                        return;
+                    }
+                    var html = '';
+                    data.users.forEach(function(u) {
+                        html += '<tr>' +
+                            '<td>' + u.id + '</td>' +
+                            '<td>' + u.username + '</td>' +
+                            '<td>' + (u.email || '-') + '</td>' +
+                            '<td>' + (u.created_at || '-') + '</td>' +
+                            '</tr>';
+                    });
+                    tbody.innerHTML = html;
+                })
+                .catch(function() {
+                    tbody.innerHTML = '<tr><td colspan="4"><div class="error-state">网络错误，请检查认证服务是否运行</div></td></tr>';
+                });
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
