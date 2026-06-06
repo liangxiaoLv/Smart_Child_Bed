@@ -1,6 +1,7 @@
 #include "red_temp.h"
 #include "pin_map.h"
 #include "uart_driver.h"
+#include "trans_2_cloud.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -82,9 +83,13 @@ static void parseFrame(const uint8_t *arr)
     int swMin = (swVer / 10) % 10;
     int swPat = swVer % 10;
 
-    ESP_LOGI(TAG, "#%d 体温:%.1f°C 传感器:%.1f°C Vdd:%.3fV Pix[%d,%d] CRC:%s SW:v%d.%d.%d",
-             frameNum, bodyTempC, die, vdd, pixMin, pixMax,
-             crcOk ? "OK" : "ERR", swMaj, swMin, swPat);
+    // ESP_LOGI(TAG, "#%d 体温:%.1f°C 传感器:%.1f°C Vdd:%.3fV Pix[%d,%d] CRC:%s SW:v%d.%d.%d",
+    //          frameNum, bodyTempC, die, vdd, pixMin, pixMax,
+    //          crcOk ? "OK" : "ERR", swMaj, swMin, swPat);
+
+    if (bodyTemp > 0) {
+        trans2cloud_updateBodyTemp(bodyTempC);
+    }
 }
 
 static void redTempTask(void *arg)
@@ -146,11 +151,11 @@ esp_err_t redTemp_start(void)
                                     RED_RX_PIN, RED_BAUD_RATE,
                                     RED_RX_BUF_SIZE);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "红外传感器 UART 初始化失败");
+        ESP_LOGE(TAG, "Infrared temperature UART init failed! ret=%d", ret);
         return ret;
     }
 
     xTaskCreate(redTempTask, "red_temp", 4096, NULL, 2, NULL);
-    ESP_LOGI(TAG, "红外体温采集已启动");
+    ESP_LOGI(TAG, "Infrared temperature task started");
     return ESP_OK;
 }

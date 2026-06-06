@@ -7,6 +7,7 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 - When compilation is needed, inform the user; they will compile themselves.
 - When Espressif official components are missing, prompt the user to download them.
 - Reply to the user in Chinese.
+- 项目连接使用的web和服务器信息参考WEB_INFO.md,文件存储在服务器
 
 ## Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 

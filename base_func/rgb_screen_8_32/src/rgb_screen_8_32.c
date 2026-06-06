@@ -6,6 +6,9 @@
 static const char *TAG = "rgb_scr";
 static ws2812_handle_t s_ws;
 
+/* 全局亮度比例: 10% (26/255 ≈ 0.102) */
+#define RGB_SCREEN_BRIGHTNESS 5
+
 /* ─── 坐标映射 ────────────────────────────────────────────── */
 
 /*
@@ -62,7 +65,10 @@ esp_err_t rgbScreen_setPixel(uint8_t row, uint8_t col,
 {
     if (!s_ws) return ESP_ERR_INVALID_STATE;
     if (row > 7 || col > 31) return ESP_ERR_INVALID_ARG;
-    ws2812Driver_setPixel(s_ws, pixelIdx(row, col), r, g, b);
+    ws2812Driver_setPixel(s_ws, pixelIdx(row, col),
+        (uint8_t)(r * RGB_SCREEN_BRIGHTNESS / 255),
+        (uint8_t)(g * RGB_SCREEN_BRIGHTNESS / 255),
+        (uint8_t)(b * RGB_SCREEN_BRIGHTNESS / 255));
     return ESP_OK;
 }
 

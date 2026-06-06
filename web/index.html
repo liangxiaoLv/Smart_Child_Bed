@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能儿童床</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260603">
 </head>
 <body>
     <header>
@@ -104,16 +104,10 @@
     </div>
 
     <main>
+        <!-- ── 环境监测 ──────────────────────── -->
         <section class="panel sensor-panel">
-            <h2><span class="icon">&#8996;</span> 传感器数据</h2>
+            <h2><span class="icon">&#8996;</span> 环境监测</h2>
             <div class="sensor-grid">
-                <div class="card">
-                    <div class="card-icon presence">&#9788;</div>
-                    <div class="card-info">
-                        <span class="card-label">人体感应</span>
-                        <span class="card-value" id="val-presence">--</span>
-                    </div>
-                </div>
                 <div class="card">
                     <div class="card-icon temp">&#9730;</div>
                     <div class="card-info">
@@ -126,6 +120,13 @@
                     <div class="card-info">
                         <span class="card-label">环境湿度</span>
                         <span class="card-value" id="val-env-hum">-- %</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon body-temp">&#9730;</div>
+                    <div class="card-info">
+                        <span class="card-label">孩子体表温度</span>
+                        <span class="card-value" id="val-body-temp">-- °C</span>
                     </div>
                 </div>
                 <div class="card">
@@ -149,28 +150,73 @@
                         <span class="card-value" id="val-eco2">-- ppm</span>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- ── 毫米波雷达 ──────────────────────── -->
+        <section class="panel radar-panel">
+            <h2><span class="icon">&#9783;</span> 毫米波雷达</h2>
+            <div class="sensor-grid">
+                <div class="card">
+                    <div class="card-icon presence">&#9788;</div>
+                    <div class="card-info">
+                        <span class="card-label">人体检测</span>
+                        <span class="card-value" id="val-radar-person">--</span>
+                    </div>
+                </div>
                 <div class="card">
                     <div class="card-icon breath">&#9832;</div>
                     <div class="card-info">
                         <span class="card-label">呼吸率</span>
-                        <span class="card-value" id="val-breath">-- 次/分</span>
+                        <span class="card-value" id="val-radar-breath">-- 次/分</span>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-icon heart">&#9829;</div>
                     <div class="card-info">
                         <span class="card-label">心率</span>
-                        <span class="card-value" id="val-heart">-- bpm</span>
+                        <span class="card-value" id="val-radar-heart">-- bpm</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon move">&#9872;</div>
+                    <div class="card-info">
+                        <span class="card-label">体动状态</span>
+                        <span class="card-value" id="val-radar-move">--</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon status-icon">&#9881;</div>
+                    <div class="card-info">
+                        <span class="card-label">监测状态</span>
+                        <span class="card-value" id="val-radar-status">--</span>
                     </div>
                 </div>
             </div>
+            <div class="sleep-record-section">
+                <div id="sleep-record-indicator" class="sleep-indicator idle">
+                    &#9679; 未在记录
+                </div>
+                <div class="ctrl-row" style="margin-top:12px;">
+                    <button class="btn btn-sleep-start" id="btn-sleep-start" onclick="startSleepRecord()">开始睡眠记录</button>
+                    <button class="btn btn-sleep-stop" id="btn-sleep-stop" onclick="stopSleepRecord()" disabled>停止睡眠记录</button>
+                </div>
+                <div class="ctrl-row" style="margin-top:8px;">
+                    <button class="btn btn-report" id="btn-sleep-report" onclick="querySleepReport()">查看睡眠报告</button>
+                </div>
+            </div>
+            <div id="sleep-report-area" class="sleep-report-area" style="display:none"></div>
         </section>
 
+        <!-- ── 设备控制 ──────────────────────── -->
         <section class="panel ctrl-panel">
             <h2><span class="icon">&#9788;</span> 设备控制</h2>
             <div class="ctrl-row">
                 <button class="btn btn-on" id="btn-led-on">开灯</button>
                 <button class="btn btn-off" id="btn-led-off">关灯</button>
+            </div>
+            <div class="ctrl-row">
+                <button class="btn btn-warning-off" id="btn-warning-off">关闭基站提示</button>
             </div>
             <div class="ctrl-row">
                 <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
@@ -209,6 +255,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=20260603"></script>
 </body>
 </html>

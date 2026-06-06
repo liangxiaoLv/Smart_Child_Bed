@@ -133,7 +133,10 @@ esp_err_t ens160_info(i2c_master_bus_handle_t bus)
     if (!bus) return ESP_ERR_INVALID_ARG;
 
     esp_err_t ret = i2cDriver_addDevice(bus, ENS160_I2C_ADDR, I2C1_SPEED_HZ, &ens160_dev);
-    if (ret != ESP_OK) return ret;
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "I2C 设备 0x%02X 添加失败", ENS160_I2C_ADDR);
+        return ret;
+    }
 
     uint8_t id[2];
     ret = readReg(ENS160_PART_ID, id, sizeof(id));

@@ -347,9 +347,14 @@ function handleMessage(topic, payload) {
     addLog(topic, payload);
 
     if (topic === TOPIC_STATUS) {
+        var d;
         try {
-            updateDisplay(JSON.parse(payload));
-        } catch (e) {}
+            d = JSON.parse(payload);
+        } catch (e) {
+            console.error('JSON parse error:', e, payload);
+            return;
+        }
+        updateDisplay(d);
     } else if (topic === TOPIC_HEARTBEAT) {
         resetHeartbeat();
     }
@@ -368,19 +373,68 @@ function aqiText(aqi) {
     return {1:'优', 2:'良', 3:'中等', 4:'差', 5:'劣'}[aqi] || '--';
 }
 
+var s_lastSleepRecording = null;  /* 缓存上一次的睡眠记录状态 */
+
 function updateDisplay(d) {
-    setVal('presence', d.presence ? '有人' : '无人', '');
+    console.log('updateDisplay called, body_temp=' + d.body_temp + ' radar_person=' + d.radar_person);
     setVal('env-temp', d.env_temp,  '°C');
     setVal('env-hum',  d.env_hum,   '%');
+    setVal('body-temp', d.body_temp, '°C');
     setVal('aqi',      aqiText(d.aqi), '');
     setVal('tvoc',     d.tvoc,      'ppb');
     setVal('eco2',     d.eco2,      'ppm');
-    setVal('breath',   d.breath,    '次/分');
-    setVal('heart',    d.heart,     'bpm');
+
+    /* ── 毫米波雷达字段 ──────────────────────── */
+    setVal('radar-person', radarPersonText(d.radar_person), '');
+    setVal('radar-breath', d.radar_breath, '次/分');
+    setVal('radar-heart',  d.radar_heart,  'bpm');
+    setVal('radar-move',   radarMoveText(d.radar_move), '');
+    setVal('radar-status', radarStatusText(d.radar_status), '');
+
+    /* 睡眠记录状态更新 — 仅在状态真正变化时刷新 UI */
+    if (d.hasOwnProperty('sleep_recording') && d.sleep_recording !== s_lastSleepRecording) {
+        s_lastSleepRecording = d.sleep_recording;
+        updateSleepRecordUI(d.sleep_recording);
+    }
+
+    /* 睡眠报告更新 */
+    if (d.hasOwnProperty('sr_valid')) {
+        showSleepReport(d);
+    }
 
     /* WiFi SSID 更新 */
     if (d.ssid) {
         $wifiLabel.textContent = d.ssid;
+    }
+}
+
+function radarPersonText(v) {
+    return {0:'无人', 1:'有人', 2:'干扰'}[v] || '--';
+}
+
+function radarMoveText(v) {
+    return {0:'无体动', 1:'小体动', 2:'大体动'}[v] || '--';
+}
+
+function radarStatusText(v) {
+    return {0:'未监测', 1:'监测中', 2:'未监测(有报告)', 3:'等待时间'}[v] || '--';
+}
+
+function updateSleepRecordUI(recording) {
+    var indicator = document.getElementById('sleep-record-indicator');
+    var btnStart  = document.getElementById('btn-sleep-start');
+    var btnStop   = document.getElementById('btn-sleep-stop');
+
+    if (recording) {
+        indicator.textContent = '● 睡眠记录中';
+        indicator.className = 'sleep-indicator recording';
+        btnStart.disabled = true;
+        btnStop.disabled  = false;
+    } else {
+        indicator.textContent = '● 未在记录';
+        indicator.className = 'sleep-indicator idle';
+        btnStart.disabled = false;
+        btnStop.disabled  = true;
     }
 }
 
@@ -475,6 +529,7 @@ function addLog(topic, msg) {
 /* ─── 按钮绑定 ──────────────────────────────────── */
 document.getElementById('btn-led-on').onclick  = function() { sendCommand('led_onoff', 1); };
 document.getElementById('btn-led-off').onclick = function() { sendCommand('led_onoff', 0); };
+document.getElementById('btn-warning-off').onclick = function() { sendCommand('warning', 0); };
 
 $modeBtns.forEach(function(btn) {
     btn.onclick = function() {
@@ -504,6 +559,62 @@ document.getElementById('btn-refresh-audio').onclick = function() {
     requestAudioList();
     addLog('audio', '刷新音频列表');
 };
+
+/* ─── 睡眠记录 ──────────────────────────────────── */
+function startSleepRecord() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addLog('system', '未连接，无法发送指令');
+        return;
+    }
+    sendCommand('mmwave_start_sleep', 1);
+    addLog('radar', '发送: 开始睡眠记录');
+
+    s_lastSleepRecording = true;
+    updateSleepRecordUI(true);
+}
+
+function querySleepReport() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addLog('system', '未连接，无法发送指令');
+        return;
+    }
+    sendCommand('mmwave_query_sleep', 1);
+    addLog('radar', '发送: 查询睡眠报告');
+}
+
+function showSleepReport(d) {
+    var area = document.getElementById('sleep-report-area');
+    if (!d.sr_valid) {
+        area.style.display = 'block';
+        area.innerHTML = '<div class="report-empty">暂无睡眠报告<br><small>请先结束睡眠记录后再查询</small></div>';
+        return;
+    }
+    area.style.display = 'block';
+    area.innerHTML =
+        '<div class="report-table">' +
+        '<div class="report-row"><span>上床</span><span>' + d.sr_bed + '</span></div>' +
+        '<div class="report-row"><span>入睡</span><span>' + d.sr_sleep + '</span></div>' +
+        '<div class="report-row"><span>醒来</span><span>' + d.sr_wake + '</span></div>' +
+        '<div class="report-row"><span>下床</span><span>' + d.sr_up + '</span></div>' +
+        '<div class="report-divider"></div>' +
+        '<div class="report-row"><span>卧床时长</span><span>' + d.sr_bed_mins + ' 分钟</span></div>' +
+        '<div class="report-row"><span>睡眠时长</span><span>' + d.sr_sleep_mins + ' 分钟</span></div>' +
+        '<div class="report-row"><span>清醒时长</span><span>' + d.sr_awake_mins + ' 分钟</span></div>' +
+        '<div class="report-row"><span>体动次数</span><span>' + d.sr_move_cnt + ' 次</span></div>' +
+        '</div>';
+}
+
+function stopSleepRecord() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addLog('system', '未连接，无法发送指令');
+        return;
+    }
+    sendCommand('mmwave_end_sleep', 1);
+    addLog('radar', '发送: 停止睡眠记录');
+
+    s_lastSleepRecording = false;
+    updateSleepRecordUI(false);
+}
 
 /* ─── 启动 ──────────────────────────────────────── */
 updateClock();

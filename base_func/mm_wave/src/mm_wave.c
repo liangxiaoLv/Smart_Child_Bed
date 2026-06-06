@@ -6,7 +6,6 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "driver/uart.h"
 #include <string.h>
 #include <time.h>
 
@@ -97,8 +96,8 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
             ESP_LOGI(TAG, "体征: %s | 呼吸 %d | 心率 %d | %s | 状态:%s",
                      person, data[1], data[2], motion, modStatus);
 
-            // trans2cloud_updateRadar(data[0] == 1, data[1], data[2],
-            //                         data[3] != 0);
+            trans2cloud_updateRadarFull(data[0], data[1], data[2],
+                                        data[3], data[4]);
         }
         break;
 
@@ -148,6 +147,29 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
         if (len >= 1) {
             ESP_LOGI(TAG, "睡眠监测: %s",
                      data[0] ? "开始记录" : "失败(已在记录中?)");
+            trans2cloud_updateSleepRecord(data[0] != 0);
+
+            /* 开始成功后主动发送当前时间 */
+            if (data[0]) {
+                time_t now;
+                time(&now);
+                struct tm ti;
+                localtime_r(&now, &ti);
+                ESP_LOGI(TAG, "自动发送时间: %04d-%02d-%02d %02d:%02d",
+                         ti.tm_year + 1900, ti.tm_mon + 1, ti.tm_mday,
+                         ti.tm_hour, ti.tm_min);
+                uint8_t time_cmd[] = {
+                    0xAA, 0x55, 0x03,
+                    0x00, 0x06,
+                    (uint16_t)(ti.tm_year + 1900) >> 8,
+                    (uint16_t)(ti.tm_year + 1900) & 0xFF,
+                    ti.tm_mon + 1, ti.tm_mday,
+                    ti.tm_hour, ti.tm_min,
+                    0x00
+                };
+                time_cmd[sizeof(time_cmd) - 1] = calcChecksum(0x03, 6, time_cmd + 5);
+                mmWave_send(time_cmd, sizeof(time_cmd));
+            }
         }
         break;
 
@@ -155,6 +177,9 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
         if (len >= 1) {
             ESP_LOGI(TAG, "睡眠记录: %s",
                      data[0] ? "已结束" : "失败(未开启或无有效时间?)");
+            if (data[0]) {
+                trans2cloud_updateSleepRecord(false);
+            }
         }
         break;
 
@@ -183,9 +208,20 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
 
             ESP_LOGI(TAG, "卧床 %d分 | 睡眠 %d分 | 清醒 %d分 | 体动 %d次",
                      bed_mins, sleep_mins, awake_mins, move_cnt);
+
+            sleep_report_t report = {
+                .bed   = { .y = bed_y,   .m = data[2],  .d = data[3],  .h = data[4],  .min = data[5] },
+                .up    = { .y = up_y,    .m = data[8],  .d = data[9],  .h = data[10], .min = data[11] },
+                .sleep = { .y = sleep_y, .m = data[14], .d = data[15], .h = data[16], .min = data[17] },
+                .wake  = { .y = wake_y,  .m = data[20], .d = data[21], .h = data[22], .min = data[23] },
+                .bed_mins = bed_mins, .sleep_mins = sleep_mins,
+                .awake_mins = awake_mins, .move_cnt = move_cnt,
+            };
+            trans2cloud_updateSleepReport(&report);
         } else if (len == 1) {
             ESP_LOGI(TAG, "睡眠报告: %s",
                      data[0] ? "有数据" : "无有效睡眠数据(未结束或未监测到有效睡眠)");
+            trans2cloud_updateSleepReportEmpty();
         }
         break;
 
@@ -267,78 +303,6 @@ static void mmWaveTask(void *arg)
     }
 }
 
-/* ── 控制台交互任务 ──────────────────────────────────────────── */
-#define SHELL_UART      1
-#define SHELL_TX_PIN    GPIO_NUM_6
-#define SHELL_RX_PIN    GPIO_NUM_7
-#define SHELL_BAUD      115200
-
-static void shellWrite(const char *s)
-{
-    uart_write_bytes(SHELL_UART, s, strlen(s));
-}
-
-static void mmWaveConsoleTask(void *arg)
-{
-    /* 安装 UART1 驱动（独立于 UART0 控制台，不冲突） */
-    uart_config_t cfg = {
-        .baud_rate  = SHELL_BAUD,
-        .data_bits  = UART_DATA_8_BITS,
-        .parity     = UART_PARITY_DISABLE,
-        .stop_bits  = UART_STOP_BITS_1,
-        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-    uart_driver_install(SHELL_UART, 256, 256, 0, NULL, 0);
-    uart_param_config(SHELL_UART, &cfg);
-    uart_set_pin(SHELL_UART, SHELL_TX_PIN, SHELL_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-
-    shellWrite("\n========== 毫米波雷达交互菜单 ==========\n");
-    shellWrite("1 - 查询版本\n");
-    shellWrite("2 - 开始睡眠监测\n");
-    shellWrite("3 - 结束睡眠记录\n");
-    shellWrite("4 - 查询睡眠报告\n");
-    shellWrite("5 - 查询设备ID\n");
-    shellWrite("6 - 设置时间\n");
-    shellWrite("=========================================\n");
-    shellWrite("请输入数字键: ");
-
-    char buf[8];
-    int  pos = 0;
-
-    for (;;) {
-        uint8_t ch;
-        int n = uart_read_bytes(SHELL_UART, &ch, 1, pdMS_TO_TICKS(200));
-
-        if (n == 1) {
-            if (ch == '\r' || ch == '\n') {
-                if (pos > 0) {
-                    buf[pos] = '\0';
-                    pos = 0;
-                    int key = buf[0] - '0';
-
-                    switch (key) {
-                    case 1: mmWave_queryVersion();      break;
-                    case 2: mmWave_startSleep();        break;
-                    case 3: mmWave_endSleep();          break;
-                    case 4: mmWave_querySleepReport();  break;
-                    case 5: mmWave_queryDeviceId();     break;
-                    case 6: mmWave_setTime(2026, 5, 11, 12, 0); break;
-                    default:
-                        shellWrite("\n无效按键，请重试: ");
-                        continue;
-                    }
-                    shellWrite("\n命令已发送\n请输入数字键: ");
-                }
-            } else if (ch >= '1' && ch <= '6' && pos == 0) {
-                buf[pos++] = (char)ch;
-                uart_write_bytes(SHELL_UART, &ch, 1);  /* 回显 */
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(50));
-    }
-}
-
 /* ── 公共接口 ────────────────────────────────────────────────── */
 
 esp_err_t mm_wave_radar_info(void)
@@ -353,9 +317,6 @@ esp_err_t mm_wave_radar_info(void)
 
     xTaskCreate(mmWaveTask, "mm_wave", 3072, NULL, 1, NULL);
     ESP_LOGI(TAG, "雷达接收任务已启动");
-
-    xTaskCreate(mmWaveConsoleTask, "mm_console", 3072, NULL, 2, NULL);
-    ESP_LOGI(TAG, "雷达控制台已启动");
     return ESP_OK;
 }
 

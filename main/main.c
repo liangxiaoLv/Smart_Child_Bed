@@ -4,12 +4,15 @@
 #include "ens210.h"
 #include "ens160.h"
 #include "mm_wave.h"
+#include "sleep_monitor.h"
 #include "rgb_led.h"
 #include "rgb_screen_8_32.h"
 #include "wav_player.h"
 #include "xl9555_driver.h"
 #include "es8388_driver.h"
 #include "red_temp.h"
+#include "rotary_encoder.h"
+#include "sensor_control.h"
 #include "i2c_driver.h"
 #include "pin_map.h"
 #include "esp_log.h"
@@ -19,6 +22,7 @@
 #include "freertos/task.h"
 #include "esp_sntp.h"
 #include <time.h>
+// #include "tf_card.h"
 
 static const char *TAG = "main";
 
@@ -44,10 +48,12 @@ static void displayTask(void *arg)
         struct tm ti;
         localtime_r(&now, &ti);
 
-        rgbScreen_renderFrame(ens210_getLatestTemp(),
-                              ens160_getLatestAQI(),
+        // rgbScreen_renderFrame(ens210_getLatestTemp(),
+        //                       ens160_getLatestAQI(),
+        //                       ti.tm_hour, ti.tm_min, ti.tm_sec);
+        rgbScreen_renderFrame(28,
+                              0,
                               ti.tm_hour, ti.tm_min, ti.tm_sec);
-
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(500));
     }
 }
@@ -64,11 +70,19 @@ static void onGotIP(void *arg, esp_event_base_t base, int32_t id, void *data)
 
 void app_main(void)
 {
-
     /* 初始化 I2C 总线（集中管理） */
     i2c_master_bus_handle_t i2c0_bus, i2c1_bus;
     ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
-    ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
+    // ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
+
+    // tfCard_listFiles();
+
+    /* 初始化 扩展芯片 */
+    xl9555Driver_init(i2c0_bus);
+    /* 初始化 音频设备*/
+    wavPlayer_init(i2c0_bus);
+    
+
     /* 1. WiFi 连接（内部创建事件循环） */
     wifiConnect_init(i2c0_bus);
 
@@ -76,23 +90,27 @@ void app_main(void)
      *    用于 BLE 配网后重连场景 */
     esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, onGotIP, NULL);
 
-    /* 3. 直连模式下 WiFi 已就绪，直接启动 MQTT（内部防重入） */
+    // /* 3. 直连模式下 WiFi 已就绪，直接启动 MQTT（内部防重入） */
     mqttClient_start();
     trans2cloud_start();
 
-    /* 5. 初始化 I2C0 设备 */
-    xl9555Driver_init(i2c0_bus);
-    es8388Driver_init(i2c0_bus);
 
     /* 6. 启动灯带 */
     rgbLed_work(i2c0_bus);
+    // SENSOR_CONTROL_RGB(i2c0_bus);
     rgbScreen_init();
 
-    /* 7. 启动传感器模块 */
-    mm_wave_radar_info();
+    // /* 7. 启动传感器模块 */
+    // mm_wave_radar_info();
+
+    // /* BCG 睡眠监护仪 */
+    // ESP_ERROR_CHECK(sleepMonitor_init());
+    // vTaskDelay(pdMS_TO_TICKS(500));
+    // sleepMonitor_setAutoReportMode();
+
     redTemp_start();
-    ens210_temp_info(i2c1_bus);
-    ens160_info(i2c1_bus);
+    // ens210_temp_info(i2c1_bus);
+    // ens160_info(i2c1_bus);
 
     /* 8. 初始化 NTP 时间同步 */
     setenv("TZ", "CST-8", 1);
@@ -105,4 +123,5 @@ void app_main(void)
     xTaskCreate(displayTask, "rgb_disp", 3072, NULL, 2, NULL);
 
     ESP_LOGI(TAG, "系统初始化完成");
+
 }

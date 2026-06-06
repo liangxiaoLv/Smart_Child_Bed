@@ -62,29 +62,28 @@
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
-#define RADAR_UART_NUM      2               /* 雷达使用 UART2 */
+#define RADAR_UART_NUM      1               /* 雷达使用 UART1 */
 #define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收 */
 #define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
 #define RADAR_RX_BUF_SIZE   2048            /* 雷达 UART RX 缓冲区 */
 
 /* ═══════════════════════════════════════════════════════════════
- * BCG 睡眠监护仪 — UART2
- * 与毫米波雷达共用 UART2，TX/RX 交叉连接
+ * BCG 睡眠监护仪 — 已停用（UART2 现归红外体温传感器）
+ * 如需重新启用，需分配空闲 UART 或与其它设备共用
  * ═══════════════════════════════════════════════════════════════ */
-#define BCG_UART_NUM        2               /* BCG 使用 UART2 */
+#define BCG_UART_NUM        2               /* 原使用 UART2，现已分配给 red_temp */
 #define BCG_RX_PIN          GPIO_NUM_5      /* ESP32 RX ← BCG_TX (IO5) */
 #define BCG_TX_PIN          GPIO_NUM_4      /* ESP32 TX → BCG_RX (IO4) */
 #define BCG_BAUD_RATE       115200          /* BCG 串口波特率 */
 #define BCG_RX_BUF_SIZE     4096            /* BCG UART RX 缓冲区 (AD 采样帧最大 ~1025B) */
 
 /* ═══════════════════════════════════════════════════════════════
- * 红外体温传感器 — UART1
- * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
+ * 红外体温传感器 — UART2
  * ═══════════════════════════════════════════════════════════════ */
-#define RED_UART_NUM        1               /* 红外使用 UART1 */
-#define RED_RX_PIN          GPIO_NUM_6      /* 红外 UART 接收*/
-#define RED_TX_PIN          GPIO_NUM_7      /* 红外 UART 发送 */
+#define RED_UART_NUM        2               /* 红外使用 UART2 */
+#define RED_RX_PIN          GPIO_NUM_6      /* 传感器上的TX */
+#define RED_TX_PIN          GPIO_NUM_7      /* 传感器上的RX */
 #define RED_BAUD_RATE       921600          /* 红外串口波特率 */
 #define RED_RX_BUF_SIZE     20480           /* 红外 UART RX 缓冲区（一帧 10256B） */
 

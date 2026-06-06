@@ -9,26 +9,77 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define PUBLISH_INTERVAL_MS  2000
-#define HEARTBEAT_INTERVAL_MS 10000
+/* mmWave 接口（extern 声明避免循环依赖）
+ * 临时屏蔽：mmWave 组件未编译时注释掉 */
+#if 0
+extern esp_err_t mmWave_startSleep(void);
+extern esp_err_t mmWave_endSleep(void);
+extern esp_err_t mmWave_querySleepReport(void);
+#endif
+
+// 数据上报间隔（5秒）
+#define PUBLISH_INTERVAL_MS  5000
+
+// mqtt心跳监测间隔（60秒）
+#define HEARTBEAT_INTERVAL_MS 60000
 
 static const char *TAG = "trans_cloud";
 
 /* ─── 最新传感器数据（各传感器模块更新写入）───────────────── */
-static float  s_env_temp  = 0;
-static float  s_env_hum   = 0;
-static uint8_t  s_aqi     = 0;
-static uint16_t s_tvoc    = 0;
-static uint16_t s_eco2    = 0;
-static bool    s_presence = false;
-static uint8_t s_breath   = 0;
-static uint8_t s_heart    = 0;
-static bool    s_move     = false;
+
+// 环境温湿度 ens210传感器
+static float  s_env_temp  = 0;   // 环境温度
+static float  s_env_hum   = 0;   // 环境湿度
+// 空气质量 ens160传感器
+static uint8_t  s_aqi     = 0;   // 空气质量指数
+static uint16_t s_tvoc    = 0;   // 总挥发性有机化合物浓度
+static uint16_t s_eco2    = 0;   // 二氧化碳浓度
+
+
+
+/*------------BCG & 毫米波 体征数据------------*/
+static uint8_t s_bcg_person   = 0; // 检测是否有人
+static uint8_t s_radar_person = 0; 
+
+static uint8_t s_bcg_move        = 0; // 0=不体动 1=小体动
+static uint8_t s_radar_move      = 0; // 0=无体动 1=小体动 2=大体动
+
+static uint8_t s_bcg_breath      = 0; // 呼吸频率（次/分钟）
+static uint8_t s_radar_breath    = 0; 
+
+static uint8_t s_bcg_heart       = 0;  // 心率（次/分钟）
+static uint8_t s_radar_heart     = 0; 
+
+static uint8_t s_radar_status    = 0;   /*毫米波监测状态 0=未监测 1=监测中 2=未监测(有报告) 3=等待时间 */
+
+static bool    s_radar_sleep_recording  = false;
+
+/*------------睡眠报告数据------------
+毫米波睡眠监测报告字段
+*/
+static bool    s_sr_valid = false;
+static char    s_sr_bed[24];       /* "YYYY-MM-DD HH:MM" */
+static char    s_sr_up[24];
+static char    s_sr_sleep[24];
+static char    s_sr_wake[24];
+static uint16_t s_sr_bed_mins;
+static uint16_t s_sr_sleep_mins;
+static uint16_t s_sr_awake_mins;
+static uint16_t s_sr_move_cnt;
+
+
+
+/*------------红外体温传感器------------*/
+static float   s_body_temp = 0;
+
 static char    s_ssid[33] = "";
 
+
+
 /* ─── 云端话题 ─────────────────────────────────────────────── */
-#define TOPIC_STATUS    "bed/status"
-#define TOPIC_HEARTBEAT "bed/heartbeat"
+#define TOPIC_STATUS       "bed/status"
+#define TOPIC_HEARTBEAT    "bed/heartbeat"
+#define TOPIC_SLEEP_REPORT "bed/sleep_report"
 
 /* ─── 数据上报任务 ─────────────────────────────────────────── */
 static void reportTask(void *arg)
@@ -39,20 +90,20 @@ static void reportTask(void *arg)
             "{\"ssid\":\"%s\","
             "\"env_temp\":%.1f,\"env_hum\":%.1f,"
             "\"aqi\":%d,\"tvoc\":%d,\"eco2\":%d,"
-            "\"presence\":%d,\"breath\":%d,\"heart\":%d,\"move\":%d}",
+            "\"presence\":%d,\"breath\":%d,\"heart\":%d,\"move\":%d,"
+            "\"body_temp\":%.1f}",
             s_ssid,
             s_env_temp, s_env_hum,
             s_aqi, s_tvoc, s_eco2,
-            s_presence, s_breath, s_heart, s_move);
+            s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move,
+            s_body_temp);
 
         mqttClient_publish(TOPIC_STATUS, json);
-        ESP_LOGI(TAG, "上报: %s", json);
-
         vTaskDelay(pdMS_TO_TICKS(PUBLISH_INTERVAL_MS));
     }
 }
 
-/* ─── 心跳任务 ────────────────────────────────────────────── */
+/*------------MQTT心跳监测------------*/
 static void heartbeatTask(void *arg)
 {
     for (;;) {
@@ -61,13 +112,14 @@ static void heartbeatTask(void *arg)
     }
 }
 
-/* ─── 数据更新接口（传感器模块调用）─────────────────────────── */
+/*------------温湿度数据更新接口------------*/
 void trans2cloud_updateEnv(float temp_c, float hum_pct)
 {
     s_env_temp = temp_c;
     s_env_hum  = hum_pct;
 }
 
+/*------------空气质量数据更新接口------------*/
 void trans2cloud_updateAir(uint8_t aqi, uint16_t tvoc_ppb, uint16_t eco2_ppm)
 {
     s_aqi  = aqi;
@@ -75,14 +127,100 @@ void trans2cloud_updateAir(uint8_t aqi, uint16_t tvoc_ppb, uint16_t eco2_ppm)
     s_eco2 = eco2_ppm;
 }
 
+/*------------毫米波雷达数据更新接口------------*/
 void trans2cloud_updateRadar(bool presence, uint8_t breath, uint8_t heart, bool move)
 {
-    s_presence = presence;
-    s_breath   = breath;
-    s_heart    = heart;
-    s_move     = move;
+    s_radar_person = presence;
+    s_radar_breath   = breath;
+    s_radar_heart    = heart;
+    s_radar_move     = move;
 }
 
+#if 0
+void trans2cloud_updateRadarFull(uint8_t person, uint8_t breath,
+                                 uint8_t heart, uint8_t motion,
+                                 uint8_t mod_status)
+{
+    s_radar_person = person;
+    s_radar_breath = breath;
+    s_radar_heart  = heart;
+    s_radar_move   = motion;
+    s_radar_status = mod_status;
+
+    /* 同步兼容旧字段 */
+    s_bcg_person = (person == 1);
+    s_bcg_breath = breath;
+    s_bcg_heart  = heart;
+    s_bcg_move   = (motion != 0);
+
+    /* 监测状态变化时更新睡眠记录标志 */
+    s_radar_sleep_recording = (mod_status == 1);
+}
+#endif
+
+/*------------BCG 体征数据更新接口------------*/
+void trans2cloud_updateBcg(uint8_t person, uint8_t breath,
+                           uint8_t heart, uint8_t move)
+{
+    s_bcg_person = person;
+    s_bcg_breath = breath;
+    s_bcg_heart  = heart;
+    s_bcg_move   = move;
+}
+
+/*------------是否有睡眠报告------------*/
+void trans2cloud_updateSleepRecord(bool recording)
+{
+    s_radar_sleep_recording = recording;
+}
+
+/*------------体温数据更新接口------------*/
+void trans2cloud_updateBodyTemp(float temp_c)
+{
+    s_body_temp = temp_c;
+}
+
+/*------------时间格式化------------*/
+static void fmtTime(char *buf, const datetime_t *dt)
+{
+    snprintf(buf, 24, "%04u-%02u-%02u %02u:%02u", (unsigned)dt->y, (unsigned)dt->m,
+             (unsigned)dt->d, (unsigned)dt->h, (unsigned)dt->min);
+}
+
+/*------------睡眠报告数据更新接口------------*/
+void trans2cloud_updateSleepReport(const sleep_report_t *report)
+{
+    fmtTime(s_sr_bed,   &report->bed);
+    fmtTime(s_sr_up,    &report->up);
+    fmtTime(s_sr_sleep, &report->sleep);
+    fmtTime(s_sr_wake,  &report->wake);
+    s_sr_bed_mins   = report->bed_mins;
+    s_sr_sleep_mins = report->sleep_mins;
+    s_sr_awake_mins = report->awake_mins;
+    s_sr_move_cnt   = report->move_cnt;
+    s_sr_valid      = true;
+
+    /* 独立报文立即发布 */
+    char json[384];
+    snprintf(json, sizeof(json),
+        "{\"sr_valid\":true,"
+        "\"sr_bed\":\"%s\",\"sr_up\":\"%s\","
+        "\"sr_sleep\":\"%s\",\"sr_wake\":\"%s\","
+        "\"sr_bed_mins\":%d,\"sr_sleep_mins\":%d,"
+        "\"sr_awake_mins\":%d,\"sr_move_cnt\":%d}",
+        s_sr_bed, s_sr_up, s_sr_sleep, s_sr_wake,
+        s_sr_bed_mins, s_sr_sleep_mins,
+        s_sr_awake_mins, s_sr_move_cnt);
+    mqttClient_publish(TOPIC_SLEEP_REPORT, json);
+}
+
+/* 无效睡眠报告（如查询失败或无报告时调用） */
+void trans2cloud_updateSleepReportEmpty(void)
+{
+    s_sr_valid = false;
+}
+
+/*------------连接的WiFi SSID 更新接口，上云显示在web------------*/
 void trans2cloud_updateWifiSSID(const char *ssid)
 {
     if (ssid) {
@@ -91,61 +229,124 @@ void trans2cloud_updateWifiSSID(const char *ssid)
     }
 }
 
-/* ─── 云端指令处理 ────────────────────────────────────────── */
-/* 网页发来的指令格式: {"cmd":"led_onoff","value":1} 等 */
+/* ─── 云端指令处理：命令表驱动 ────────────────────────────── */
+/* 网页发来的指令格式: {"cmd":"led_onoff","value":1} 或 {"cmd":"led_mode","value":"rainbow"} */
+
+typedef void (*cmd_handler_t)(int num_val, const char *str_val);
+
+/* ── 场景指令（仅日志） ── */
+static void h_scene_sleep(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到后台场景指令：%s (value=%d) <<<", v ? "睡着" : "醒来", v);
+}
+static void h_scene_cry(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到后台场景指令：哭闹 <<<");
+}
+static void h_scene_feed(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到后台场景指令：喂奶提醒 <<<");
+}
+static void h_scene_story(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到后台场景指令：播放故事 <<<");
+}
+
+/* ── LED 指令 ── */
+static void h_led_onoff(int v, const char *s) {
+    rgbLed_setOnOff(v != 0);
+}
+static void h_led_mode(int v, const char *s) {
+    if (s) rgbLed_setMode(s);
+}
+static void h_led_brightness(int v, const char *s) {
+    rgbLed_setBrightness((uint8_t)v);
+}
+
+/* ── 音量指令 ── */
+static void h_volume(int v, const char *s) {
+    wavPlayer_setVolume((uint8_t)v);
+}
+
+/* ── 毫米波睡眠指令 ── */
+static void h_mmwave_start(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到云端指令：开始睡眠记录 <<<");
+#if 0
+    mmWave_startSleep();
+#endif
+}
+static void h_mmwave_end(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到云端指令：停止睡眠记录 <<<");
+#if 0
+    mmWave_endSleep();
+#endif
+}
+static void h_mmwave_query(int v, const char *s) {
+    ESP_LOGI(TAG, ">>> 收到云端指令：查询睡眠报告 <<<");
+    s_sr_valid = false;
+#if 0
+    mmWave_querySleepReport();
+#endif
+}
+
+/* ── 命令表 ── */
+typedef struct {
+    const char    *name;
+    cmd_handler_t  handler;
+} cmd_entry_t;
+
+static const cmd_entry_t s_cmd_table[] = {
+    /* 场景 */
+    {"sleep",               h_scene_sleep},
+    {"cry",                 h_scene_cry},
+    {"feed",                h_scene_feed},
+    {"story",               h_scene_story},
+    /* LED */
+    {"led_onoff",           h_led_onoff},
+    {"led_mode",            h_led_mode},
+    {"led_brightness",      h_led_brightness},
+    /* 音频 */
+    {"volume",              h_volume},
+    /* 毫米波 */
+    {"mmwave_start_sleep",  h_mmwave_start},
+    {"mmwave_end_sleep",    h_mmwave_end},
+    {"mmwave_query_sleep",  h_mmwave_query},
+};
+#define CMD_COUNT (sizeof(s_cmd_table) / sizeof(s_cmd_table[0]))
+
+/* ── 指令分发 ── */
 static void onCloudCommand(const char *topic, const char *payload)
 {
     ESP_LOGI(TAG, "收到云端指令: %s", payload);
 
-    /* 提取 cmd 字段 */
+    /* 提取 cmd */
     char cmd[32] = {0};
     const char *p = strstr(payload, "\"cmd\":\"");
     if (p) {
         p += 7;
         int i = 0;
-        while (*p && *p != '"' && i < (int)sizeof(cmd) - 1) {
-            cmd[i++] = *p++;
-        }
+        while (*p && *p != '"' && i < (int)sizeof(cmd) - 1) cmd[i++] = *p++;
     }
 
-    /* 提取 value 数值 */
-    int numVal = 0;
+    /* 统一提取 value（数值 / 字符串） */
+    int  num_val = 0;
+    char str_val[16] = {0};
     p = strstr(payload, "\"value\":");
     if (p) {
         p += 8;
-        numVal = atoi(p);
+        if (*p == '"') {
+            p++;
+            int i = 0;
+            while (*p && *p != '"' && i < (int)sizeof(str_val) - 1) str_val[i++] = *p++;
+        } else {
+            num_val = atoi(p);
+        }
     }
 
-    if (strcmp(cmd, "sleep") == 0) {
-        ESP_LOGI(TAG, ">>> 收到后台场景指令：%s (value=%d) <<<",
-                 numVal ? "睡着" : "醒来", numVal);
-    } else if (strcmp(cmd, "cry") == 0) {
-        ESP_LOGI(TAG, ">>> 收到后台场景指令：哭闹 <<<");
-    } else if (strcmp(cmd, "feed") == 0) {
-        ESP_LOGI(TAG, ">>> 收到后台场景指令：喂奶提醒 <<<");
-    } else if (strcmp(cmd, "story") == 0) {
-        ESP_LOGI(TAG, ">>> 收到后台场景指令：播放故事 <<<");
-    } else if (strcmp(cmd, "led_onoff") == 0) {
-        rgbLed_setOnOff(numVal != 0);
-    } else if (strcmp(cmd, "led_mode") == 0) {
-        /* value 是字符串，如 "rainbow" */
-        p = strstr(payload, "\"value\":\"");
-        if (p) {
-            p += 9;
-            char mode[16] = {0};
-            int i = 0;
-            while (*p && *p != '"' && i < (int)sizeof(mode) - 1) {
-                mode[i++] = *p++;
-            }
-            rgbLed_setMode(mode);
+    /* 查表分发 */
+    for (int i = 0; i < CMD_COUNT; i++) {
+        if (strcmp(cmd, s_cmd_table[i].name) == 0) {
+            s_cmd_table[i].handler(num_val, str_val[0] ? str_val : NULL);
+            return;
         }
-    } else if (strcmp(cmd, "led_brightness") == 0) {
-        rgbLed_setBrightness((uint8_t)numVal);
-    } else if (strcmp(cmd, "volume") == 0) {
-        wavPlayer_setVolume((uint8_t)numVal);
-    } else {
-        ESP_LOGW(TAG, "未知指令: %s", cmd);
     }
+    ESP_LOGW(TAG, "未知指令: %s", cmd);
 }
 
 /* ─── 音频数据接收与播放 ──────────────────────────────────── */
@@ -215,6 +416,6 @@ esp_err_t trans2cloud_start(void)
     mqttClient_onAudioChunk(onAudioChunk);
     xTaskCreate(reportTask, "rpt2cloud", 3072, NULL, 3, NULL);
     xTaskCreate(heartbeatTask, "hb2cloud", 2048, NULL, 2, NULL);
-    ESP_LOGI(TAG, "云端数据上报已启动");
+    ESP_LOGI(TAG, "Cloud data reporting started");
     return ESP_OK;
 }

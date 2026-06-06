@@ -208,6 +208,6 @@ esp_err_t rgbLed_setBrightness(uint8_t pct)
     if (pct < 10) pct = 10;
     if (pct > 100) pct = 100;
     s_brightness = (float)pct / 100.0f;
-    ESP_LOGI(TAG, "外部指令 → 亮度 %d%%", pct);
+    // ESP_LOGI(TAG, "外部指令 → 亮度 %d%%", pct);
     return ESP_OK;
 }
