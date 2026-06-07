@@ -605,13 +605,12 @@ input[type="range"] {
     text-decoration: underline;
 }
 
-/* ── Radar Panel ──────────────────────── */
-.radar-panel {
+/* ── BCG Panel ──────────────────────── */
+.bcg-panel {
     flex: 0.9;
 }
 
 .card-icon.move { color: var(--orange); }
-.card-icon.status-icon { color: var(--accent); }
 
 /* ── Sleep Record ───────────────────── */
 .sleep-record-section {

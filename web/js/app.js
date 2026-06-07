@@ -376,7 +376,7 @@ function aqiText(aqi) {
 var s_lastSleepRecording = null;  /* 缓存上一次的睡眠记录状态 */
 
 function updateDisplay(d) {
-    console.log('updateDisplay called, body_temp=' + d.body_temp + ' radar_person=' + d.radar_person);
+    console.log('updateDisplay called, body_temp=' + d.body_temp + ' bcg_person=' + d.bcg_person);
     setVal('env-temp', d.env_temp,  '°C');
     setVal('env-hum',  d.env_hum,   '%');
     setVal('body-temp', d.body_temp, '°C');
@@ -384,12 +384,11 @@ function updateDisplay(d) {
     setVal('tvoc',     d.tvoc,      'ppb');
     setVal('eco2',     d.eco2,      'ppm');
 
-    /* ── 毫米波雷达字段 ──────────────────────── */
-    setVal('radar-person', radarPersonText(d.radar_person), '');
-    setVal('radar-breath', d.radar_breath, '次/分');
-    setVal('radar-heart',  d.radar_heart,  'bpm');
-    setVal('radar-move',   radarMoveText(d.radar_move), '');
-    setVal('radar-status', radarStatusText(d.radar_status), '');
+    /* ── BCG 体征字段 ──────────────────────── */
+    setVal('bcg-person', bcgPersonText(d.bcg_person), '');
+    setVal('bcg-breath', d.bcg_breath, '次/分');
+    setVal('bcg-heart',  d.bcg_heart,  'bpm');
+    setVal('bcg-move',   bcgMoveText(d.bcg_move), '');
 
     /* 睡眠记录状态更新 — 仅在状态真正变化时刷新 UI */
     if (d.hasOwnProperty('sleep_recording') && d.sleep_recording !== s_lastSleepRecording) {
@@ -408,16 +407,12 @@ function updateDisplay(d) {
     }
 }
 
-function radarPersonText(v) {
-    return {0:'无人', 1:'有人', 2:'干扰'}[v] || '--';
+function bcgPersonText(v) {
+    return {0:'无人', 1:'有人'}[v] || '--';
 }
 
-function radarMoveText(v) {
-    return {0:'无体动', 1:'小体动', 2:'大体动'}[v] || '--';
-}
-
-function radarStatusText(v) {
-    return {0:'未监测', 1:'监测中', 2:'未监测(有报告)', 3:'等待时间'}[v] || '--';
+function bcgMoveText(v) {
+    return {0:'无体动', 1:'有体动'}[v] || '--';
 }
 
 function updateSleepRecordUI(recording) {

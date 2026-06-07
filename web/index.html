@@ -153,47 +153,40 @@
             </div>
         </section>
 
-        <!-- ── 毫米波雷达 ──────────────────────── -->
-        <section class="panel radar-panel">
-            <h2><span class="icon">&#9783;</span> 毫米波雷达</h2>
+        <!-- ── 睡眠体征监测 ──────────────────────── -->
+        <section class="panel bcg-panel">
+            <h2><span class="icon">&#9829;</span> 睡眠体征监测</h2>
             <div class="sensor-grid">
                 <div class="card">
                     <div class="card-icon presence">&#9788;</div>
                     <div class="card-info">
-                        <span class="card-label">人体检测</span>
-                        <span class="card-value" id="val-radar-person">--</span>
+                        <span class="card-label">在床检测</span>
+                        <span class="card-value" id="val-bcg-person">--</span>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-icon breath">&#9832;</div>
                     <div class="card-info">
                         <span class="card-label">呼吸率</span>
-                        <span class="card-value" id="val-radar-breath">-- 次/分</span>
+                        <span class="card-value" id="val-bcg-breath">-- 次/分</span>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-icon heart">&#9829;</div>
                     <div class="card-info">
                         <span class="card-label">心率</span>
-                        <span class="card-value" id="val-radar-heart">-- bpm</span>
+                        <span class="card-value" id="val-bcg-heart">-- bpm</span>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-icon move">&#9872;</div>
                     <div class="card-info">
                         <span class="card-label">体动状态</span>
-                        <span class="card-value" id="val-radar-move">--</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon status-icon">&#9881;</div>
-                    <div class="card-info">
-                        <span class="card-label">监测状态</span>
-                        <span class="card-value" id="val-radar-status">--</span>
+                        <span class="card-value" id="val-bcg-move">--</span>
                     </div>
                 </div>
             </div>
-            <div class="sleep-record-section">
+            <div class="sleep-record-section" style="display:none">
                 <div id="sleep-record-indicator" class="sleep-indicator idle">
                     &#9679; 未在记录
                 </div>

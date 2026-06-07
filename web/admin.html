@@ -56,6 +56,14 @@
             </div>
         </section>
 
+        <section class="panel">
+            <h2><span class="icon">🌡️</span> 环境数据模拟</h2>
+            <div class="btn-row">
+                <button class="btn btn-sleep" onclick="simEnv()">📊 模拟环境数据</button>
+            </div>
+            <p style="color:#888; font-size:12px; margin-top:10px;">温度28°C / 湿度71% / 空气质量优 / TVOC 50ppb / eCO₂ 450ppm</p>
+        </section>
+
     </main>
 
     <section class="log-panel">
@@ -102,6 +110,23 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(msg);
                 addLog('发送 → station/control: ' + cmd + '=' + value, 'log-tx');
+            } else {
+                addLog('发送失败: 未连接', 'log-tx');
+            }
+        }
+
+        function simEnv() {
+            const payload = JSON.stringify({
+                env_temp: 28.0,
+                env_hum: 71.0,
+                aqi: 1,
+                tvoc: 50,
+                eco2: 450
+            });
+            const msg = JSON.stringify({ topic: 'bed/status', payload: payload });
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(msg);
+                addLog('模拟环境数据已发送 (temp=28°C hum=71% aqi=优 tvoc=50 eco2=450)', 'log-tx');
             } else {
                 addLog('发送失败: 未连接', 'log-tx');
             }

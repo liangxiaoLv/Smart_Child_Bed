@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 /* mmWave 接口（extern 声明避免循环依赖）
- * 临时屏蔽：mmWave 组件未编译时注释掉 */
+ * 当前未启用，模块启用后取消 #if 0 */
 #if 0
 extern esp_err_t mmWave_startSleep(void);
 extern esp_err_t mmWave_endSleep(void);
@@ -37,7 +37,7 @@ static uint16_t s_eco2    = 0;   // 二氧化碳浓度
 
 
 
-/*------------BCG & 毫米波 体征数据------------*/
+/*------------BCG 体征数据------------*/
 static uint8_t s_bcg_person   = 0; // 检测是否有人
 static uint8_t s_radar_person = 0; 
 
@@ -55,7 +55,7 @@ static uint8_t s_radar_status    = 0;   /*毫米波监测状态 0=未监测 1=�
 static bool    s_radar_sleep_recording  = false;
 
 /*------------睡眠报告数据------------
-毫米波睡眠监测报告字段
+BCG 睡眠监测报告字段
 */
 static bool    s_sr_valid = false;
 static char    s_sr_bed[24];       /* "YYYY-MM-DD HH:MM" */
@@ -90,7 +90,7 @@ static void reportTask(void *arg)
             "{\"ssid\":\"%s\","
             "\"env_temp\":%.1f,\"env_hum\":%.1f,"
             "\"aqi\":%d,\"tvoc\":%d,\"eco2\":%d,"
-            "\"presence\":%d,\"breath\":%d,\"heart\":%d,\"move\":%d,"
+            "\"bcg_person\":%d,\"bcg_breath\":%d,\"bcg_heart\":%d,\"bcg_move\":%d,"
             "\"body_temp\":%.1f}",
             s_ssid,
             s_env_temp, s_env_hum,
@@ -264,7 +264,7 @@ static void h_volume(int v, const char *s) {
     wavPlayer_setVolume((uint8_t)v);
 }
 
-/* ── 毫米波睡眠指令 ── */
+/* ── 毫米波睡眠指令（保留，当前未启用） ── */
 static void h_mmwave_start(int v, const char *s) {
     ESP_LOGI(TAG, ">>> 收到云端指令：开始睡眠记录 <<<");
 #if 0
@@ -303,7 +303,7 @@ static const cmd_entry_t s_cmd_table[] = {
     {"led_brightness",      h_led_brightness},
     /* 音频 */
     {"volume",              h_volume},
-    /* 毫米波 */
+    /* 毫米波（保留，当前未启用） */
     {"mmwave_start_sleep",  h_mmwave_start},
     {"mmwave_end_sleep",    h_mmwave_end},
     {"mmwave_query_sleep",  h_mmwave_query},
