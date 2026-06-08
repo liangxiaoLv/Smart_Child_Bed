@@ -7,7 +7,7 @@ static const char *TAG = "rgb_scr";
 static ws2812_handle_t s_ws;
 
 /* 全局亮度比例: 10% (26/255 ≈ 0.102) */
-#define RGB_SCREEN_BRIGHTNESS 5
+#define RGB_SCREEN_8_32_BRIGHTNESS 5
 
 /* ─── 坐标映射 ────────────────────────────────────────────── */
 
@@ -43,7 +43,7 @@ static const uint8_t s_digits[10][7] = {
 
 esp_err_t rgbScreen_init(void)
 {
-    s_ws = ws2812Driver_new(RGB_SCREEN_DATA_PIN, RGB_SCREEN_LED_NUM);
+    s_ws = ws2812Driver_new(RGB_SCREEN_8_32_DATA_PIN, RGB_SCREEN_8_32_LED_NUM);
     if (!s_ws) {
         ESP_LOGE(TAG, "点阵屏 WS2812 初始化失败");
         return ESP_FAIL;
@@ -66,9 +66,9 @@ esp_err_t rgbScreen_setPixel(uint8_t row, uint8_t col,
     if (!s_ws) return ESP_ERR_INVALID_STATE;
     if (row > 7 || col > 31) return ESP_ERR_INVALID_ARG;
     ws2812Driver_setPixel(s_ws, pixelIdx(row, col),
-        (uint8_t)(r * RGB_SCREEN_BRIGHTNESS / 255),
-        (uint8_t)(g * RGB_SCREEN_BRIGHTNESS / 255),
-        (uint8_t)(b * RGB_SCREEN_BRIGHTNESS / 255));
+        (uint8_t)(r * RGB_SCREEN_8_32_BRIGHTNESS / 255),
+        (uint8_t)(g * RGB_SCREEN_8_32_BRIGHTNESS / 255),
+        (uint8_t)(b * RGB_SCREEN_8_32_BRIGHTNESS / 255));
     return ESP_OK;
 }
 

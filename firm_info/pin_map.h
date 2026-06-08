@@ -127,16 +127,16 @@
  * 数据线 GPIO 45
  * ═══════════════════════════════════════════════════════════════ */
 #define RGB_LED_DATA_PIN     GPIO_NUM_38      /* WS2812 数据线 */
-#define RGB_LED_NUM      15              /* 灯带 LED 数量 */
+#define RGB_LED_NUM      254             /* 灯带 LED 数量 */
 #define RGB_LED_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
 
 /* ═══════════════════════════════════════════════════════════════
  * RGB 8×32 点阵屏 — RMT (WS2812 协议)
- * 数据线 GPIO 48，与 LCD_R4 复用
+ * 数据线 GPIO 39
  * ═══════════════════════════════════════════════════════════════ */
-#define RGB_SCREEN_DATA_PIN     GPIO_NUM_39
-#define RGB_SCREEN_LED_NUM      256              /* 256 颗实际显示 */
-#define RGB_SCREEN_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
+#define RGB_SCREEN_8_32_DATA_PIN     GPIO_NUM_39
+#define RGB_SCREEN_8_32_LED_NUM      256              /* 256 颗实际显示 */
+#define RGB_SCREEN_8_32_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
 
 /* ═══════════════════════════════════════════════════════════════
  * 旋转编码器 — 正交脉冲 + 按键
