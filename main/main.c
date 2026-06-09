@@ -7,6 +7,7 @@
 #include "sleep_monitor.h"
 #include "rgb_led.h"
 #include "rgb_screen_8_32.h"
+#include "rgb_screen_16_16_4.h"
 #include "wav_player.h"
 #include "xl9555_driver.h"
 #include "es8388_driver.h"
@@ -71,12 +72,13 @@ static void onGotIP(void *arg, esp_event_base_t base, int32_t id, void *data)
 void app_main(void)
 {
     /* 初始化 I2C 总线（集中管理） */
-    i2c_master_bus_handle_t i2c0_bus, i2c1_bus;
-    ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
+    // i2c_master_bus_handle_t i2c0_bus, i2c1_bus;
+    // ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
     // ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
-
+    rgbScreen16x16x4_init();
+    rgbScreen16x16x4_initButtons();   /* KEY0/1/2 中断 */
     // tfCard_listFiles();
-
+#if 0
     /* 初始化 扩展芯片 */
     xl9555Driver_init(i2c0_bus);
     /* 初始化 音频设备*/
@@ -99,6 +101,7 @@ void app_main(void)
     rgbLed_work(i2c0_bus);
     // SENSOR_CONTROL_RGB(i2c0_bus);
     rgbScreen_init();
+    rgbScreen16x16x4_init();   /* 16×16×4 大屏: 启动显示 ABCD, key1 翻页 */
 
     // /* 7. 启动传感器模块 */
     // mm_wave_radar_info();
@@ -123,5 +126,5 @@ void app_main(void)
     xTaskCreate(displayTask, "rgb_disp", 3072, NULL, 2, NULL);
 
     ESP_LOGI(TAG, "系统初始化完成");
-
+#endif
 }
