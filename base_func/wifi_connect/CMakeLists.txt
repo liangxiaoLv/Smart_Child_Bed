@@ -7,7 +7,7 @@ idf_component_register(
         esp_event
         esp_netif
         esp_common
-        xl9555_driver
+        esp_driver_gpio
         wav_player
         network_provisioning
         bt

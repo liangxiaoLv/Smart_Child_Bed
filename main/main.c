@@ -6,26 +6,31 @@
 #include "mm_wave.h"
 #include "sleep_monitor.h"
 #include "rgb_led.h"
-#include "rgb_screen_8_32.h"
 #include "rgb_screen_16_16_4.h"
 #include "wav_player.h"
-#include "xl9555_driver.h"
+
 #include "es8388_driver.h"
 #include "red_temp.h"
 #include "rotary_encoder.h"
 #include "sensor_control.h"
 #include "i2c_driver.h"
-#include "pin_map.h"
+#include "aw9523b_driver.h"
+
 #include "esp_log.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_sntp.h"
 #include <time.h>
-// #include "tf_card.h"
+
+
+#include "pin_map_yt_demo.h"
+
 
 static const char *TAG = "main";
+#if 0
 
 extern const uint8_t start_connect_wav_start[] asm("_binary_start_connect_wav_start");
 extern const uint8_t start_connect_wav_end[]   asm("_binary_start_connect_wav_end");
@@ -69,14 +74,26 @@ static void onGotIP(void *arg, esp_event_base_t base, int32_t id, void *data)
     trans2cloud_start();
 }
 
+#endif
 void app_main(void)
 {
     /* 初始化 I2C 总线（集中管理） */
-    // i2c_master_bus_handle_t i2c0_bus, i2c1_bus;
-    // ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
-    // ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
-    rgbScreen16x16x4_init();
-    rgbScreen16x16x4_initButtons();   /* KEY0/1/2 中断 */
+    i2c_master_bus_handle_t i2c0_bus;
+    ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
+
+    /*初始化IO扩展芯片并点亮LED*/
+    ESP_ERROR_CHECK(aw9523bDriver_init(i2c0_bus, NULL));
+    /* P0.0 接 LED, 设为输出, 拉低点亮 */
+    ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
+    ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
+    ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
+
+    /*连接wifi*/
+    wifiConnect_init();
+
+
+    // rgbScreen16x16x4_init(); 
+    // rgbScreen16x16x4_initButtons();   /* KEY0/1/2 中断 */
     // tfCard_listFiles();
 #if 0
     /* 初始化 扩展芯片 */

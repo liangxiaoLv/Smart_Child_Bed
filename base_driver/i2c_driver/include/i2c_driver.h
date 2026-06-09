@@ -37,3 +37,8 @@ esp_err_t i2cDriver_writeRead(i2c_master_dev_handle_t dev,
                                uint8_t *rd_buf,
                                size_t rd_len,
                                uint32_t timeout_ms);
+
+/* 探测总线上某个 7-bit 地址是否有从机应答 (timeout_ms 内) */
+esp_err_t i2cDriver_probe(i2c_master_bus_handle_t bus,
+                          uint8_t addr,
+                          uint32_t timeout_ms);

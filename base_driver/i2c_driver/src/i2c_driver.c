@@ -12,16 +12,16 @@ esp_err_t i2cDriver_initBus(int port,
                              i2c_master_bus_handle_t *bus_out)
 {
     if (port < 0 || port >= I2C_MAX_PORT) {
-        ESP_LOGE(TAG, "I2C 端口号 %d 无效", port);
+        ESP_LOGE(TAG, "I2C port %d unvalid", port);
         return ESP_ERR_INVALID_ARG;
     }
     if (!bus_out) {
-        ESP_LOGE(TAG, "bus_out 不能为 NULL");
+        ESP_LOGE(TAG, "bus_out should not be NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (s_bus[port]) {
-        ESP_LOGI(TAG, "I2C%d 总线已存在，复用句柄", port);
+        ESP_LOGI(TAG, "I2C%d has been created, using the handle", port);
         *bus_out = s_bus[port];
         return ESP_OK;
     }
@@ -34,9 +34,10 @@ esp_err_t i2cDriver_initBus(int port,
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
+    ESP_LOGI(TAG, "I2C%d bus inti: SDA=IO%d, SCL=IO%d", port, sda, scl);
     esp_err_t ret = i2c_new_master_bus(&cfg, bus_out);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C%d 总线初始化失败: %s", port, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "I2C%d bus init fail: %s", port, esp_err_to_name(ret));
         return ret;
     }
 
@@ -50,11 +51,11 @@ esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
                                i2c_master_dev_handle_t *dev_out)
 {
     if (!bus) {
-        ESP_LOGE(TAG, "bus 不能为 NULL");
+        ESP_LOGE(TAG, "bus should not be NULL");
         return ESP_ERR_INVALID_ARG;
     }
     if (!dev_out) {
-        ESP_LOGE(TAG, "dev_out 不能为 NULL");
+        ESP_LOGE(TAG, "dev_out should not be NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -65,7 +66,7 @@ esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
     };
     esp_err_t ret = i2c_master_bus_add_device(bus, &cfg, dev_out);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C 设备 0x%02X 添加失败: %s", addr, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "I2C device 0x%02X add fail: %s", addr, esp_err_to_name(ret));
     }
     return ret;
 }
@@ -104,4 +105,12 @@ esp_err_t i2cDriver_writeRead(i2c_master_dev_handle_t dev,
     }
     return i2c_master_transmit_receive(dev, wr_data, wr_len,
                                        rd_buf, rd_len, timeout_ms);
+}
+
+esp_err_t i2cDriver_probe(i2c_master_bus_handle_t bus,
+                          uint8_t addr,
+                          uint32_t timeout_ms)
+{
+    if (!bus) return ESP_ERR_INVALID_ARG;
+    return i2c_master_probe(bus, addr, timeout_ms);
 }

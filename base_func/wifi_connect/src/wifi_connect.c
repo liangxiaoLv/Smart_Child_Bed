@@ -12,9 +12,10 @@
  */
 
 #include "wifi_connect.h"
-#include "xl9555_driver.h"
 #include "wav_player.h"
 #include "trans_2_cloud.h"
+
+#include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -212,22 +213,23 @@ static void wifiEventHandler(void *arg, esp_event_base_t base,
     }
 }
 
-/* ─── KEY0 监测任务 ────────────────────────────────────────── */
+/* ─── BOOT 按键 (GPIO0) 监测任务 ──────────────────────────── */
 
 static void key0MonitorTask(void *arg)
 {
     uint32_t press_ms = 0;
     for (;;) {
-        bool pressed = !xl9555Driver_getPin(XL9555_PORT1, XL9555_KEY0);
+        /* ESP32-S3 BOOT 按键: 按下 IO0 拉低 */
+        bool pressed = (gpio_get_level(GPIO_NUM_0) == 0);
         if (pressed) {
             press_ms += KEY0_POLL_MS;
             if (press_ms >= KEY0_LONG_PRESS_MS) {
-                ESP_LOGW(TAG, "KEY0 long press %"PRIu32"ms, clear credentials and restart", press_ms);
-                size_t len = start_connect_wav_end - start_connect_wav_start;
-                wavPlayer_play(start_connect_wav_start, len);
-                while (wavPlayer_isPlaying()) {
-                    vTaskDelay(pdMS_TO_TICKS(50));
-                }
+                ESP_LOGW(TAG, "BOOT (IO0) long press %"PRIu32"ms, clear credentials and restart", press_ms);
+                // size_t len = start_connect_wav_end - start_connect_wav_start;
+                // wavPlayer_play(start_connect_wav_start, len);
+                // while (wavPlayer_isPlaying()) {
+                //     vTaskDelay(pdMS_TO_TICKS(50));
+                // }
                 network_prov_mgr_reset_wifi_provisioning();
                 esp_restart();
             }
@@ -236,6 +238,19 @@ static void key0MonitorTask(void *arg)
         }
         vTaskDelay(pdMS_TO_TICKS(KEY0_POLL_MS));
     }
+}
+
+/* 配 BOOT 按键 IO0 为输入 + 上拉 (ESP32-S3 内部上拉即可) */
+static void bootKeyInit(void)
+{
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << GPIO_NUM_0),
+        .mode         = GPIO_MODE_INPUT,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&io));
 }
 
 /* ─── 公共 API ─────────────────────────────────────────────── */
@@ -253,7 +268,7 @@ esp_err_t wifiConnect_clearCredentials(void)
     return network_prov_mgr_reset_wifi_provisioning();
 }
 
-esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
+esp_err_t wifiConnect_init()
 {
     /* 1. NVS 初始化 */
     esp_err_t ret = nvs_flash_init();
@@ -263,14 +278,9 @@ esp_err_t wifiConnect_init(i2c_master_bus_handle_t bus)
     }
     ESP_RETURN_ON_ERROR(ret, TAG, "NVS init failed");
 
-    /* 2. XL9555 + KEY0 长按监测 */
-    if (!bus) {
-        ESP_LOGW(TAG, "I2C bus NULL, skip XL9555 KEY0 monitoring");
-    } else if (xl9555Driver_init(bus) != ESP_OK) {
-        ESP_LOGW(TAG, "XL9555 init failed, KEY0 long press unavailable");
-    } else {
-        xTaskCreate(key0MonitorTask, "key0_mon", 2048, NULL, 2, NULL);
-    }
+    /* 2. BOOT 按键 (IO0) 长按监测 - 配网清除触发 */
+    bootKeyInit();
+    xTaskCreate(key0MonitorTask, "key0_mon", 2048, NULL, 2, NULL);
 
     /* 3. 网络栈初始化 */
     s_wifi_eg = xEventGroupCreate();
