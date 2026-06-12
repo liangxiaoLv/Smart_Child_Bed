@@ -18,6 +18,9 @@ esp_err_t i2cDriver_addDevice(i2c_master_bus_handle_t bus,
                                uint32_t speed_hz,
                                i2c_master_dev_handle_t *dev_out);
 
+/* 从总线上移除从设备 */
+esp_err_t i2cDriver_removeDevice(i2c_master_dev_handle_t dev);
+
 /* 向设备写入 len 字节 */
 esp_err_t i2cDriver_write(i2c_master_dev_handle_t dev,
                            const uint8_t *data,

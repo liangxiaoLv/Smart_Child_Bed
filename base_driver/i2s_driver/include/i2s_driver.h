@@ -23,6 +23,7 @@ typedef struct {
     int        ws_io;
     int        dout_io;
     int        din_io;
+    uint32_t   mclk_multiple;   /* MCLK/FS 倍率, 默认 256, 24-bit 须为 3 的倍数 */
 } i2sDriver_config_t;
 
 #define I2S_DRIVER_DEFAULT_CONFIG() { \
@@ -33,6 +34,7 @@ typedef struct {
     .enable_rx = false, \
     .din_io = -1, \
     .mclk_io = -1, \
+    .mclk_multiple = 256, \
 }
 
 /* 初始化 I2S 通道，port 取值 I2S_NUM_0 / I2S_NUM_AUTO 等。

@@ -19,8 +19,6 @@
 #define TOPIC_AUDIO_START  "bed/audio_start"
 #define TOPIC_AUDIO        "bed/audio"
 
-#define MQTT_QOS         1
-
 static const char *TAG = "mqtt";
 
 /* ─── 模块状态 ────────────────────────────────────────────── */
@@ -46,9 +44,9 @@ static void mqttEventHandler(void *arg, esp_event_base_t base,
     switch ((esp_mqtt_event_id_t)id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT 已连接 Broker");
-        esp_mqtt_client_subscribe(s_client, TOPIC_CONTROL, MQTT_QOS);
-        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO_START, MQTT_QOS);
-        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO, MQTT_QOS);
+        esp_mqtt_client_subscribe(s_client, TOPIC_CONTROL, MQTT_QOS_AT_LEAST_ONCE);
+        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO_START, MQTT_QOS_AT_LEAST_ONCE);
+        esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO, MQTT_QOS_AT_LEAST_ONCE);
         ESP_LOGI(TAG, "已订阅: %s, %s, %s", TOPIC_CONTROL, TOPIC_AUDIO_START, TOPIC_AUDIO);
         break;
 
@@ -168,12 +166,26 @@ esp_err_t mqttClient_publish(const char *topic, const char *payload)
         ESP_LOGE(TAG, "MQTT 未初始化，无法发布");
         return ESP_FAIL;
     }
-    int msg_id = esp_mqtt_client_publish(s_client, topic, payload, 0, MQTT_QOS, 0);
+    int msg_id = esp_mqtt_client_publish(s_client, topic, payload, 0, MQTT_QOS_AT_LEAST_ONCE, 0);
     if (msg_id < 0) {
         ESP_LOGE(TAG, "发布失败, topic=%s", topic);
         return ESP_FAIL;
     }
     ESP_LOGD(TAG, "已发布 [%s] (msg_id=%d)", topic, msg_id);
+    return ESP_OK;
+}
+
+esp_err_t mqttClient_publishBinary(const char *topic, const uint8_t *data, size_t len)
+{
+    if (!s_client) {
+        ESP_LOGE(TAG, "MQTT 未初始化，无法发布");
+        return ESP_FAIL;
+    }
+    int msg_id = esp_mqtt_client_publish(s_client, topic, (const char *)data, (int)len, MQTT_QOS_AT_LEAST_ONCE, 0);
+    if (msg_id < 0) {
+        ESP_LOGE(TAG, "发布二进制失败, topic=%s, len=%d", topic, (int)len);
+        return ESP_FAIL;
+    }
     return ESP_OK;
 }
 

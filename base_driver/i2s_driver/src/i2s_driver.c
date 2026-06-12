@@ -47,7 +47,9 @@ esp_err_t i2sDriver_init(int port, const i2sDriver_config_t *config, i2sDriver_h
     }
 
     i2s_std_config_t std_cfg = {
-        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(config->sample_rate),
+        .clk_cfg  = { .sample_rate_hz = config->sample_rate,
+                      .clk_src = I2S_CLK_SRC_DEFAULT,
+                      .mclk_multiple = config->mclk_multiple },
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
                         config->bits_per_sample,
                         config->stereo ? I2S_SLOT_MODE_STEREO : I2S_SLOT_MODE_MONO),

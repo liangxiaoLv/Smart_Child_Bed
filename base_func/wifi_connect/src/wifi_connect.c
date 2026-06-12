@@ -12,8 +12,8 @@
  */
 
 #include "wifi_connect.h"
-#include "wav_player.h"
 #include "trans_2_cloud.h"
+#include "cloud_mqtt.h"
 
 #include "driver/gpio.h"
 
@@ -38,9 +38,6 @@
 /* ─── 常量 ─────────────────────────────────────────────────── */
 
 static const char *TAG = "wifi_connect";
-
-extern const uint8_t start_connect_wav_start[] asm("_binary_start_connect_wav_start");
-extern const uint8_t start_connect_wav_end[]   asm("_binary_start_connect_wav_end");
 
 // 手机端作为参考，未使用
 #define PROV_SEC2_USERNAME    "wifiprov"
@@ -103,6 +100,14 @@ static void getDeviceServiceName(char *name, size_t max)
 }
 
 /* ─── 事件处理 ─────────────────────────────────────────────── */
+
+/* WiFi 获取到 IP 后自动启动 MQTT 和云端上报 */
+static void onGotIP(void *arg, esp_event_base_t base, int32_t id, void *data)
+{
+    ESP_LOGI(TAG, "WiFi ok, start MQTT & cloud reporting");
+    mqttClient_start();
+    trans2cloud_start();
+}
 
 static void provEventHandler(void *arg, esp_event_base_t base,
                              int32_t id, void *data)
@@ -225,11 +230,6 @@ static void key0MonitorTask(void *arg)
             press_ms += KEY0_POLL_MS;
             if (press_ms >= KEY0_LONG_PRESS_MS) {
                 ESP_LOGW(TAG, "BOOT (IO0) long press %"PRIu32"ms, clear credentials and restart", press_ms);
-                // size_t len = start_connect_wav_end - start_connect_wav_start;
-                // wavPlayer_play(start_connect_wav_start, len);
-                // while (wavPlayer_isPlaying()) {
-                //     vTaskDelay(pdMS_TO_TICKS(50));
-                // }
                 network_prov_mgr_reset_wifi_provisioning();
                 esp_restart();
             }
@@ -280,7 +280,7 @@ esp_err_t wifiConnect_init()
 
     /* 2. BOOT 按键 (IO0) 长按监测 - 配网清除触发 */
     bootKeyInit();
-    xTaskCreate(key0MonitorTask, "key0_mon", 2048, NULL, 2, NULL);
+    xTaskCreate(key0MonitorTask, "BOOT_mon", 2048, NULL, 2, NULL);
 
     /* 3. 网络栈初始化 */
     s_wifi_eg = xEventGroupCreate();
@@ -312,6 +312,10 @@ esp_err_t wifiConnect_init()
         esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                    wifiEventHandler, NULL),
         TAG, "Register IP event failed");
+    ESP_RETURN_ON_ERROR(
+        esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                                   onGotIP, NULL),
+        TAG, "Register onGotIP failed");
 
     /* 5. 初始化配网管理器 */
     network_prov_mgr_config_t prov_cfg = {

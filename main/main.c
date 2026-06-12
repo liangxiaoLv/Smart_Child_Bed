@@ -1,18 +1,12 @@
 #include "wifi_connect.h"
-#include "cloud_mqtt.h"
-#include "trans_2_cloud.h"
-#include "ens210.h"
-#include "ens160.h"
+#include "mic_sample.h"
 #include "mm_wave.h"
 #include "sleep_monitor.h"
 #include "rgb_led.h"
 #include "rgb_screen_16_16_4.h"
-#include "wav_player.h"
 
 #include "es8388_driver.h"
 #include "red_temp.h"
-#include "rotary_encoder.h"
-#include "sensor_control.h"
 #include "i2c_driver.h"
 #include "aw9523b_driver.h"
 
@@ -64,17 +58,10 @@ static void displayTask(void *arg)
     }
 }
 
-/* WiFi 获取到 IP 后自动启动 MQTT 和云端上报 */
-static void onGotIP(void *arg, esp_event_base_t base, int32_t id, void *data)
-{
-    ESP_LOGI(TAG, "WiFi 已就绪，启动 MQTT + 云端上报");
-    size_t len = wifi_connect_ok_wav_end - wifi_connect_ok_wav_start;
-    wavPlayer_play(wifi_connect_ok_wav_start, len);
-    mqttClient_start();
-    trans2cloud_start();
-}
+
 
 #endif
+
 void app_main(void)
 {
     /* 初始化 I2C 总线（集中管理） */
@@ -88,13 +75,15 @@ void app_main(void)
     ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
     ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
 
-    /*连接wifi*/
+    /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
+    
+    micSample_start(i2c0_bus);
+
 
 
     // rgbScreen16x16x4_init(); 
     // rgbScreen16x16x4_initButtons();   /* KEY0/1/2 中断 */
-    // tfCard_listFiles();
 #if 0
     /* 初始化 扩展芯片 */
     xl9555Driver_init(i2c0_bus);
@@ -102,16 +91,12 @@ void app_main(void)
     wavPlayer_init(i2c0_bus);
     
 
-    /* 1. WiFi 连接（内部创建事件循环） */
-    wifiConnect_init(i2c0_bus);
-
     /* 2. 注册 WiFi 就绪回调（必须在 wifiConnect_init 之后，事件循环已存在）
      *    用于 BLE 配网后重连场景 */
-    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, onGotIP, NULL);
+    
 
     // /* 3. 直连模式下 WiFi 已就绪，直接启动 MQTT（内部防重入） */
-    mqttClient_start();
-    trans2cloud_start();
+    
 
 
     /* 6. 启动灯带 */

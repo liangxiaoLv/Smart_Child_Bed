@@ -412,10 +412,14 @@ esp_err_t trans2cloud_start(void)
     started = true;
 
     mqttClient_onCommand(onCloudCommand);
-    mqttClient_onAudioStart(onAudioStart);
-    mqttClient_onAudioChunk(onAudioChunk);
+    // mqttClient_onAudioStart(onAudioStart);
+    // mqttClient_onAudioChunk(onAudioChunk);
+
+
     xTaskCreate(reportTask, "rpt2cloud", 3072, NULL, 3, NULL);
     xTaskCreate(heartbeatTask, "hb2cloud", 2048, NULL, 2, NULL);
+
+    
     ESP_LOGI(TAG, "Cloud data reporting started");
     return ESP_OK;
 }

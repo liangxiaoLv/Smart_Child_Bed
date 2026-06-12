@@ -107,6 +107,12 @@ esp_err_t i2cDriver_writeRead(i2c_master_dev_handle_t dev,
                                        rd_buf, rd_len, timeout_ms);
 }
 
+esp_err_t i2cDriver_removeDevice(i2c_master_dev_handle_t dev)
+{
+    if (!dev) return ESP_ERR_INVALID_ARG;
+    return i2c_master_bus_rm_device(dev);
+}
+
 esp_err_t i2cDriver_probe(i2c_master_bus_handle_t bus,
                           uint8_t addr,
                           uint32_t timeout_ms)

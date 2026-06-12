@@ -16,3 +16,4 @@ dependencies:
   #   public: true
   espressif/network_provisioning: ^1.2.4
   espressif/mqtt: ^1.0.0
+  espressif/esp_codec_dev: ^1.0
