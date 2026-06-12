@@ -6,7 +6,7 @@
  */
 
 #include "es7210_drv.h"
-#include "pin_map_yt_demo.h"
+#include "pin_map.h"
 
 #include "i2c_driver.h"
 #include "driver/i2s_std.h"

@@ -5,7 +5,7 @@
  */
 
 #include "mic_adc.h"
-#include "pin_map_yt_demo.h"
+#include "pin_map.h"
 
 #include "es7210_adc.h"
 #include "esp_codec_dev.h"

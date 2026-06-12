@@ -1,6 +1,6 @@
 /*
  * AW9523B 16-bit GPIO Expander 驱动
- * - I2C 地址: 0x5B (来自 pin_map_yt_demo.h)
+ * - I2C 地址: 0x5B
  * - INTN (GPIO47) 下降沿触发
  * - RSTN (GPIO48) 低电平复位
  *

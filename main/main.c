@@ -5,7 +5,6 @@
 #include "rgb_led.h"
 #include "rgb_screen_16_16_4.h"
 
-#include "es8388_driver.h"
 #include "red_temp.h"
 #include "i2c_driver.h"
 #include "aw9523b_driver.h"
@@ -20,16 +19,12 @@
 #include <time.h>
 
 
-#include "pin_map_yt_demo.h"
+#include "pin_map.h"
 
 
 static const char *TAG = "main";
 #if 0
 
-extern const uint8_t start_connect_wav_start[] asm("_binary_start_connect_wav_start");
-extern const uint8_t start_connect_wav_end[]   asm("_binary_start_connect_wav_end");
-extern const uint8_t wifi_connect_ok_wav_start[] asm("_binary_wifi_connect_ok_wav_start");
-extern const uint8_t wifi_connect_ok_wav_end[]   asm("_binary_wifi_connect_ok_wav_end");
 
 /* 点阵屏显示刷新任务（500ms 一帧，冒号 1Hz 闪烁） */
 static void displayTask(void *arg)
@@ -78,7 +73,7 @@ void app_main(void)
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
     
-    micSample_start(i2c0_bus);
+    // micSample_start(i2c0_bus);
 
 
 

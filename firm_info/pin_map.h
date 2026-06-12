@@ -13,36 +13,52 @@
  */
 
 #define ESP_IDF_version "v6.0.0"
-
+#define YT_ESP32_DEMO_BOARD
+// #define DNESP32_BOARD
 
 /* ═══════════════════════════════════════════════════════════════
- * UART0 — 调试 / 固件下载
+ * UART0 — 串口调试 / 固件下载
+ YT DEMO接专用TXD0 RXD0不占用IO口
  * ═══════════════════════════════════════════════════════════════ */
+#ifdef DNESP32_BOARD 
 #define UART0_TX_PIN        GPIO_NUM_0      /* UART0 发送引脚 */
 #define UART0_RX_PIN        GPIO_NUM_1      /* UART0 接收引脚 */
 #define UART0_BAUD_RATE     115200          /* 调试串口波特率 */
+#endif
+
+#define UART1_PORT_NUM 1
+#define UART1_TX_PIN        GPIO_NUM_17     /* UART1 发送引脚 */
+#define UART1_RX_PIN        GPIO_NUM_18     /* UART1 接收引脚 */
+
+#define UART2_PORT_NUM 2
+#define UART2_TX_PIN        GPIO_NUM_42      /* UART2 发送引脚 */
+#define UART2_RX_PIN        GPIO_NUM_41      /* UART2 接收引脚 */
+
 
 /* ═══════════════════════════════════════════════════════════════
- * I2C0 — XL9555 IO 扩展芯片
+ * I2C0 — XL9555/AW9523B  IO扩展芯片
  * ═══════════════════════════════════════════════════════════════ */
 #define I2C0_PORT_NUM       0               /* I2C 端口号，对应 I2C_NUM_0 */
+#ifdef DNESP32_BOARD 
 #define I2C0_SDA_PIN        GPIO_NUM_41     /* I2C0 数据线 */
 #define I2C0_SCL_PIN        GPIO_NUM_42     /* I2C0 时钟线 */
+#else
+#define I2C0_SDA_PIN        GPIO_NUM_1     /* I2C0 数据线 */
+#define I2C0_SCL_PIN        GPIO_NUM_2     /* I2C0 时钟线 */
+#endif
 #define I2C0_SPEED_HZ       100000          /* I2C0 总线速率 100 kHz */
-
 /* ═══════════════════════════════════════════════════════════════
- * I2C1 — 光/温湿度/气体传感器
- * 注意：GPIO 4/5 与 LCD 控制线、毫米波雷达 UART 复用
- * 重映射：ENS210 使用时将 I2C1 映射到 GPIO 17/18
+ * I2C1
  * ═══════════════════════════════════════════════════════════════ */
-#define I2C1_PORT_NUM       1               /* I2C 端口号，对应 I2C_NUM_1 */
-#define I2C1_SDA_PIN        GPIO_NUM_17      /* I2C1 数据线，与 LCD_PCLK / RADAR_RX 复用 */
-#define I2C1_SCL_PIN        GPIO_NUM_18      /* I2C1 时钟线，与 LCD_DE / RADAR_TX 复用 */
-#define I2C1_SPEED_HZ       100000          /* I2C1 总线速率 100 kHz */
+#define I2C1_PORT_NUM       1                /* I2C 端口号，对应 I2C_NUM_1 */
+#define I2C1_SCL_PIN        GPIO_NUM_15      /* I2C1 时钟线，与 LCD_DE / RADAR_TX 复用 */
+#define I2C1_SDA_PIN        GPIO_NUM_16      /* I2C1 数据线，与 LCD_PCLK / RADAR_RX 复用 */
+#define I2C1_SPEED_HZ       100000           /* I2C1 总线速率 100 kHz */
 
 /* ═══════════════════════════════════════════════════════════════
  * SPI2 — LCD 数据总线 / TF 卡
  * TF 卡与 LCD 共用 SPI2，通过 CS 片选区分
+ * DNESP32_BOARD使用
  * ═══════════════════════════════════════════════════════════════ */
 #define SPI2_MOSI_PIN       GPIO_NUM_11     /* SPI2 主出从入 */
 #define SPI2_CLK_PIN        GPIO_NUM_12     /* SPI2 时钟 */
@@ -51,14 +67,15 @@
 
 /* TF 卡 — SPI2 设备 */
 #define SD_CARD_CS_PIN      GPIO_NUM_2      /* TF 卡 SPI 片选 */
-
 /* ═══════════════════════════════════════════════════════════════
- * XL9555 — IO 扩展芯片（挂载于 I2C0）
- * 注: 已停用, 代码保留但 main.c 不再调用
+ * XL9555/AW9523B — IO 扩展芯片（挂载于 I2C0）
  * ═══════════════════════════════════════════════════════════════ */
 #define XL9555_I2C_ADDR     0x20            /* XL9555 7-bit I2C 设备地址 */
-#define XL9555_INT_PIN      GPIO_NUM_40     /* XL9555 中断输出引脚，与 GT9XX_INT / LCD_DC 复用 */
+#define XL9555_INT_PIN      GPIO_NUM_40     /* XL9555 中断输出引脚 */
 
+#define AW9523B_I2C_ADDR    0x5B            /* AW9523B 7-bit I2C 设备地址 */
+#define AW9523B_INTN_PIN    GPIO_NUM_47     /* 中断输出引脚, 低电平有效 */
+#define AW9523B_RSTN_PIN    GPIO_NUM_48     /* 复位引脚, 低电平复位 */
 /* ═══════════════════════════════════════════════════════════════
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
@@ -162,3 +179,14 @@
 #define ROTARY_ENC_A_PIN     GPIO_NUM_17     /* A 相脉冲信号 */
 #define ROTARY_ENC_B_PIN     GPIO_NUM_16     /* B 相脉冲信号 */
 #define ROTARY_ENC_SW_PIN    GPIO_NUM_37      /* 按键信号（按下为低） */
+
+/* ═══════════════════════════════════════════════════════════════
+ * ES7210 — 4 通道音频 ADC (挂载于 I2C0)
+ * 3 路 MIC 采集, I2S 输出
+ * ═══════════════════════════════════════════════════════════════ */
+#define ES7210_I2C_ADDR      0x80           /* 8-bit I2C 地址 (esp_codec_dev 内部会 >>1 转 7-bit)，AD1=AD0=0 */
+#define ES7210_I2S_MCLK_PIN  GPIO_NUM_3     /* 主时钟 */
+#define ES7210_I2S_BCLK_PIN  GPIO_NUM_46    /* 位时钟 */
+#define ES7210_I2S_LRCK_PIN  GPIO_NUM_9     /* 左右声道时钟 */
+#define ES7210_I2S_DIN_PIN   GPIO_NUM_10    /* ADC 数据 (ES7210 DOUT → ESP32 DIN) */
+#define ES7210_INT_PIN       GPIO_NUM_12    /* 中断输出 */

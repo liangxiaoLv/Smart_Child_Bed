@@ -8,7 +8,7 @@
 #include "mic_sample.h"
 #include "es7210_drv.h"
 #include "cloud_mqtt.h"
-#include "pin_map_yt_demo.h"
+#include "pin_map.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"

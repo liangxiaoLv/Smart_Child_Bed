@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pin_map_yt_demo.h"   /* AW9523B_I2C_ADDR 等硬件地址 (YT 演示项目) */
+#include "pin_map.h"
 #include "i2c_driver.h"
 #include "esp_err.h"
 #include <stdint.h>
