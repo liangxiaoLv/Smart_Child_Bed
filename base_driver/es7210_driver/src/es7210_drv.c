@@ -239,7 +239,7 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     if (ret) return ESP_FAIL;
 
     /* 2. 主/从 时钟配置 从模式，时钟由esp32s3提供*/
-    /* Mode: Slave, TDM I2S, no EQ, BCLK no-invert */
+    /* Mode: Slave, standard I2S, no EQ, BCLK no-invert */
     ret = write_reg(drv, ES7210_MODE_CONFIG_REG08, 0x00);
     if (ret) return ESP_FAIL; 
 
@@ -275,8 +275,8 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     ret = write_reg(drv, ES7210_SDP_INTERFACE1_REG11, 0x60);
     if (ret) return ESP_FAIL;
 
-    /* 7. TDM/SDOUT: TDM I2S 模式, 所有通道到 SDOUT1 */
-    ret = write_reg(drv, ES7210_SDP_INTERFACE2_REG12, 0x02);
+    /* 7. SDOUT: 标准 I2S, ADC12→SDOUT1 */
+    ret = write_reg(drv, ES7210_SDP_INTERFACE2_REG12, 0x00);
     if (ret) return ESP_FAIL;
 
     /* 8. 解除静音 (0x00 = all unmuted) */

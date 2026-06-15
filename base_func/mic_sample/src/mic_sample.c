@@ -89,10 +89,10 @@ esp_err_t micSample_start(void *bus)
 
     es7210_drv_config_t es_cfg = {
         .i2c_bus     = bus,
-        .mic_mask    = ES7210_DRV_SEL_MIC1 | ES7210_DRV_SEL_MIC2 | ES7210_DRV_SEL_MIC3,
+        .mic_mask    = ES7210_DRV_SEL_MIC1,
         .sample_rate = 16000,
         .pga_gain    = 10,     /* 30dB = 10 × 3dB */
-        .total_slots = 4,      /* TDM 4 slot (MIC1/2/3/4) */
+        .total_slots = 2,      /* 标准 I2S 立体声 */
         .mclk_io     = ES7210_I2S_MCLK_PIN,
         .bclk_io     = ES7210_I2S_BCLK_PIN,
         .ws_io       = ES7210_I2S_LRCK_PIN,
@@ -110,8 +110,8 @@ esp_err_t micSample_start(void *bus)
 
     /* ── 2. 采样 10 秒, 直存 int16_t PCM ─────────────────────── */
 
-    int total_slots = es_cfg.total_slots;   /* 4 */
-    int out_channels = total_slots;         /* 4 通道, 全部保留便于诊断 */
+    int total_slots = es_cfg.total_slots;   /* 2 (I2S STD 立体声) */
+    int out_channels = 1;                   /* 仅 MIC1, 丢弃右声道 */
     int samples_per_sec = 16000;
     int max_samples = samples_per_sec * SAMPLE_DURATION_SEC;
     int max_bytes   = max_samples * out_channels * sizeof(int16_t);
@@ -123,7 +123,7 @@ esp_err_t micSample_start(void *bus)
         return ESP_ERR_NO_MEM;
     }
 
-    /* TDM 模式: read_buf = READ_FRAMES × total_slots */
+    /* I2S STD 模式: read_buf = READ_FRAMES × total_slots (2ch) */
     int16_t *read_buf = heap_caps_malloc(READ_FRAMES * total_slots * sizeof(int16_t),
                                           MALLOC_CAP_SPIRAM);
     if (!read_buf) {
@@ -135,15 +135,11 @@ esp_err_t micSample_start(void *bus)
 
     int total_samples = 0;
     int empty_reads = 0;
-    ESP_LOGI(TAG, "══════ 开始 %d 秒采样 (TDM %dch) ══════", SAMPLE_DURATION_SEC, out_channels);
+    ESP_LOGI(TAG, "══════ 开始 %d 秒采样 (I2S MONO, 仅 MIC1) ══════", SAMPLE_DURATION_SEC);
 
     for (int sec = 1; sec <= SAMPLE_DURATION_SEC; sec++) {
         int target = sec * samples_per_sec;
-        int32_t min_c[4], max_c[4];
-        for (int ch = 0; ch < out_channels; ch++) {
-            min_c[ch] = INT32_MAX;
-            max_c[ch] = INT32_MIN;
-        }
+        int32_t min_c = INT32_MAX, max_c = INT32_MIN;
 
         while (total_samples < target && total_samples < max_samples) {
             int n = es7210_drv_read(es7210, read_buf, READ_FRAMES);
@@ -165,24 +161,17 @@ esp_err_t micSample_start(void *bus)
             if (total_samples + to_copy > max_samples)
                 to_copy = max_samples - total_samples;
 
-            /* TDM 全通道直存: slot0=MIC1, slot1=MIC2, slot2=MIC3, slot3=MIC4 */
+            /* I2S 立体声: slot0=MIC1, 仅提取 slot0 */
             for (int i = 0; i < to_copy; i++) {
-                for (int ch = 0; ch < out_channels; ch++) {
-                    int16_t v = read_buf[i * total_slots + ch];
-                    pcm[(total_samples + i) * out_channels + ch] = v;
-                    if (v < min_c[ch]) min_c[ch] = v;
-                    if (v > max_c[ch]) max_c[ch] = v;
-                }
+                int16_t v = read_buf[i * total_slots];  /* slot 0 only */
+                pcm[total_samples + i] = v;
+                if (v < min_c) min_c = v;
+                if (v > max_c) max_c = v;
             }
             total_samples += to_copy;
         }
-        ESP_LOGI(TAG, "[%2ds] samples=%6d  MIC1[%6"PRId32"~%6"PRId32"]"
-                       "  MIC2[%6"PRId32"~%6"PRId32"]"
-                       "  MIC3[%6"PRId32"~%6"PRId32"]"
-                       "  MIC4[%6"PRId32"~%6"PRId32"]",
-                 sec, total_samples,
-                 min_c[0], max_c[0], min_c[1], max_c[1],
-                 min_c[2], max_c[2], min_c[3], max_c[3]);
+        ESP_LOGI(TAG, "[%2ds] samples=%6d  MIC1[%6"PRId32"~%6"PRId32"]",
+                 sec, total_samples, min_c, max_c);
     }
     /* ── 3. 封装 WAV ─────────────────────────────────────────── */
 
