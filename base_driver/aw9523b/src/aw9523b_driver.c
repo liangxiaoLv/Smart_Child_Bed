@@ -114,9 +114,10 @@ esp_err_t aw9523bDriver_init(i2c_master_bus_handle_t bus, aw9523b_isr_t cb)
         ESP_LOGW(TAG, "ID 0x%02X (非 0x23, 继续)", id);
     }
 
-    /* 默认所有 IO 为输入 (上拉由芯片内部提供) */
+    /* 默认所有 IO 为输入 (上拉由芯片内部提供)
+     * P1_4/P1_5 除外 — 用于 UART 设备切换, 设为输出 */
     if ((err = writeReg(AW_REG_DIR_P0, 0xFF)) != ESP_OK) return err;
-    if ((err = writeReg(AW_REG_DIR_P1, 0xFF)) != ESP_OK) return err;
+    if ((err = writeReg(AW_REG_DIR_P1, 0xCF)) != ESP_OK) return err;  /* bit4/5=输出 */
     /* 中断使能: 全部允许 */
     if ((err = writeReg(AW_REG_INT_EN_P0, 0xFF)) != ESP_OK) return err;
     if ((err = writeReg(AW_REG_INT_EN_P1, 0xFF)) != ESP_OK) return err;

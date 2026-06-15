@@ -1,8 +1,37 @@
 #include "uart_driver.h"
+#include "pin_map.h"
+#include "aw9523b_driver.h"
 #include "driver/uart.h"
 #include "esp_log.h"
 
 static const char *TAG = "uart_driver";
+
+/* ── UART 设备切换 ─────────────────────────────────────────── */
+esp_err_t uartDriver_switch_device(int uart_num, int device)
+{
+    uint16_t pin_mask;
+
+    if (uart_num == 1) {
+        pin_mask = UART1_SW_PIN;
+    } else if (uart_num == 2) {
+        pin_mask = UART2_SW_PIN;
+    } else {
+        ESP_LOGE(TAG, "无效的 UART 端口号: %d", uart_num);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    bool level = device ? AW_PIN_HIGH : AW_PIN_LOW;
+    esp_err_t ret = aw9523bDriver_setPin(pin_mask, level);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "UART%d 切换 Device%c 失败", uart_num, device ? 'A' : 'B');
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "UART%d → Device%c", uart_num, device ? 'A' : 'B');
+    return ESP_OK;
+}
+
+/* ── UART 基础驱动 ─────────────────────────────────────────── */
 
 esp_err_t uartDriver_init(int uart_num, int tx_pin, int rx_pin, int baud_rate, int rx_buf_size)
 {

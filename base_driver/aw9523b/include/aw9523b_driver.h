@@ -18,7 +18,7 @@
 #define AW_REG_INT_EN_P1        0x07  /* P1 中断使能 */
 
 /* ── 16 个 IO 位掩码 (P0.0~P0.7, P1.0~P1.7) ───────────────── */
-#define AW_PIN_P00     (1 << 0)
+#define AW_PIN_P00     (1 << 0) /*LED，低电平点亮*/
 #define AW_PIN_P01     (1 << 1)
 #define AW_PIN_P02     (1 << 2)
 #define AW_PIN_P03     (1 << 3)

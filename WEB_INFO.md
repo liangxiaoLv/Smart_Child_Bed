@@ -16,6 +16,7 @@
 | 端口 | 协议 | 用途 | systemd 服务 |
 |------|------|------|-------------|
 | 8080 | HTTP | 手机 UI (`/var/www/bed/`) | `bed_web` |
+| 8081 | HTTP | 监控仪表盘 (`/var/www/monitor/`) | `monitor_web` |
 | 9001 | WebSocket | MQTT ↔ 浏览器桥接 | `mqtt_ws_bridge` |
 | 9002 | HTTP | 后台管理 (`/var/www/admin/`) | `admin_web` |
 | 1883 | MQTT | Mosquitto MQTT Broker | `mosquitto` |
@@ -27,6 +28,7 @@ MQTT 认证: 用户名 `childbe` / 密码 `Yinta`
 | 页面 | URL |
 |------|-----|
 | 手机 UI | `http://60.205.235.150:8080/` |
+| 监控仪表盘 | `http://60.205.235.150:8081/` |
 | 后台管理 | `http://60.205.235.150:9002/` |
 
 ## 服务器文件

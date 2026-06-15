@@ -26,6 +26,12 @@
 #define UART0_BAUD_RATE     115200          /* 调试串口波特率 */
 #endif
 
+#define UART1_DEVICE_IRTEMP 1
+#define UART1_DEVICE_MOTO   0
+
+#define UART2_DEVICE_BCG    1
+#define UART2_DEVICE_RADAR  0
+
 #define UART1_PORT_NUM 1
 #define UART1_TX_PIN        GPIO_NUM_17     /* UART1 发送引脚 */
 #define UART1_RX_PIN        GPIO_NUM_18     /* UART1 接收引脚 */
@@ -76,6 +82,10 @@
 #define AW9523B_I2C_ADDR    0x5B            /* AW9523B 7-bit I2C 设备地址 */
 #define AW9523B_INTN_PIN    GPIO_NUM_47     /* 中断输出引脚, 低电平有效 */
 #define AW9523B_RSTN_PIN    GPIO_NUM_48     /* 复位引脚, 低电平复位 */
+
+/* AW9523B 端口引脚 — UART 设备切换 */
+#define UART1_SW_PIN        AW_PIN_P14      /* UART1 切换: P1_4, 高=DeviceA, 低=DeviceB */
+#define UART2_SW_PIN        AW_PIN_P15      /* UART2 切换: P1_5, 高=DeviceA, 低=DeviceB */
 /* ═══════════════════════════════════════════════════════════════
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
@@ -99,15 +109,14 @@
 /* ═══════════════════════════════════════════════════════════════
  * 红外体温传感器 — UART2
  * ═══════════════════════════════════════════════════════════════ */
-#define RED_UART_NUM        2               /* 红外使用 UART2 */
-#define RED_RX_PIN          GPIO_NUM_6      /* 传感器上的TX */
-#define RED_TX_PIN          GPIO_NUM_7      /* 传感器上的RX */
+#define RED_UART_NUM        UART1_PORT_NUM  /* 红外使用 UART1 */
+#define RED_RX_PIN          UART1_RX_PIN      /* 传感器上的TX */
+#define RED_TX_PIN          UART1_TX_PIN      /* 传感器上的RX */
 #define RED_BAUD_RATE       921600          /* 红外串口波特率 */
 #define RED_RX_BUF_SIZE     20480           /* 红外 UART RX 缓冲区（一帧 10256B） */
 
 /* ═══════════════════════════════════════════════════════════════
- * ENS210温度传感器 — I2C1（重映射）
- * SDA/SCL 使用 GPIO 17/18，与 LCD 数据线 B3/G7 复用
+ * ENS210温度传感器 — I2C1
  * ═══════════════════════════════════════════════════════════════ */
 #define ENS210_SDA_PIN      GPIO_NUM_17     /* ENS210 I2C 数据线 */
 #define ENS210_SCL_PIN      GPIO_NUM_18     /* ENS210 I2C 时钟线 */

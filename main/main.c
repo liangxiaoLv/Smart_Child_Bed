@@ -8,6 +8,7 @@
 #include "red_temp.h"
 #include "i2c_driver.h"
 #include "aw9523b_driver.h"
+#include "uart_driver.h"
 
 #include "esp_log.h"
 #include "esp_event.h"
@@ -72,16 +73,22 @@ void app_main(void)
 
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
+
+    // uart1 使用体温传感器
+    uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
+    IRTemp_start();
+
+
+
     
-    // micSample_start(i2c0_bus);
+    
+    micSample_start(i2c0_bus);
 
 
 
     // rgbScreen16x16x4_init(); 
     // rgbScreen16x16x4_initButtons();   /* KEY0/1/2 中断 */
 #if 0
-    /* 初始化 扩展芯片 */
-    xl9555Driver_init(i2c0_bus);
     /* 初始化 音频设备*/
     wavPlayer_init(i2c0_bus);
     
@@ -108,7 +115,7 @@ void app_main(void)
     // vTaskDelay(pdMS_TO_TICKS(500));
     // sleepMonitor_setAutoReportMode();
 
-    redTemp_start();
+    
     // ens210_temp_info(i2c1_bus);
     // ens160_info(i2c1_bus);
 
