@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Child Bed Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, :before, :after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      background: #e5e5e5;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .phone-stage {
+      position: relative;
+      padding: 11px;
+      border-radius: 46px;
+      background: linear-gradient(145deg, #5c5c62, #3a3a3e 40%, #252528);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.07) inset, 0 40px 80px rgba(0,0,0,0.55), 0 12px 28px rgba(0,0,0,0.35);
+    }
+    .screen {
+      width: 393px;
+      height: 852px;
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+      background: #221f1b;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.35) inset;
+    }
+    .scroll-area {
+      height: 100%;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      position: relative;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .scroll-area::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+    /* ── Background layers ── */
+    .bg-base {
+      position: absolute;
+      left: 0; right: 0; top: 0; height: 852px;
+      background: linear-gradient(180deg, #1b1d39 0%, #13121a 47.11%, #13121a 100%);
+    }
+    .bg-top-gradient {
+      position: absolute;
+      left: 0; right: 0; top: 0; height: 524px;
+      background: linear-gradient(180deg, #3b4f94 0%, #151523 100%);
+    }
+    .bg-blob-1 {
+      position: absolute;
+      left: -210px; top: -110px;
+      width: 446px; height: 446px;
+      border-radius: 50%;
+      background: #392276;
+      filter: blur(100px);
+    }
+    .bg-blob-2 {
+      position: absolute;
+      left: -174px; top: -163px;
+      width: 399px; height: 205px;
+      border-radius: 50%;
+      background: #505990;
+      filter: blur(62px);
+      transform: rotate(-10.32deg);
+    }
+    .bg-blob-3 {
+      position: absolute;
+      left: 175px; top: -162px;
+      width: 359px; height: 359px;
+      border-radius: 50%;
+      background: #214488;
+      filter: blur(125px);
+    }
+    .top-stars {
+      position: absolute;
+      left: 15px; top: 62px;
+      width: 351px; height: 137px;
+      opacity: 0.9;
+    }
+    .top-moon {
+      position: absolute;
+      left: 315px; top: 145px;
+      width: 44px; height: 35px;
+      transform: rotate(-60.51deg);
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      position: absolute;
+      left: 0; top: 0;
+      width: 393px; height: 59px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .status-time {
+      flex: 1; min-width: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding-bottom: 3px; padding-left: 10px;
+    }
+    .status-time span {
+      width: 54px; text-align: center;
+      font-size: 16px; font-weight: 600; line-height: 21px;
+      letter-spacing: -0.32px; color: #fff;
+    }
+    .status-spacer { width: 125px; }
+    .status-icons {
+      flex: 1; min-width: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding-right: 11px;
+    }
+    .status-icons-inner {
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .status-icons-inner img { display: block; }
+    .battery-wrap {
+      position: relative;
+      width: 27.4px; height: 13px;
+    }
+    .battery-wrap img { position: absolute; }
+    .battery-outline { inset: 0; width: 100%; height: 100%; }
+    .battery-end { right: 0; top: 4.4px; width: 1.4px; height: 4.22px; }
+    .battery-fill { left: 2px; top: 2px; width: 21px; height: 9px; }
+
+    /* ── Header ── */
+    .header {
+      position: absolute;
+      left: 18px; top: 63px;
+      width: 358px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .avatar-wrap {
+      position: relative;
+      width: 62px; height: 62px;
+    }
+    .avatar-bg {
+      position: absolute; inset: 0;
+      width: 62px; height: 62px;
+    }
+    .avatar-photo {
+      position: absolute;
+      left: 5px; top: 5px;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .header-name {
+      font-size: 24px; font-weight: 600; line-height: 30px; color: #fff;
+    }
+    .header-sub {
+      font-size: 14px; font-weight: 400; line-height: 20px; color: rgba(255,255,255,0.5);
+    }
+    .menu-btn {
+      width: 48px; height: 48px;
+      cursor: pointer;
+    }
+
+    /* ── Ring ── */
+    .ring-container {
+      position: absolute;
+      left: 65.5px; top: 195.5px;
+      width: 265px; height: 262px;
+      pointer-events: none;
+    }
+    /* outer frame — 自转，与呼吸环同圆心 */
+    .ring-outer-orbit {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      transform-origin: 50% 50%;
+      animation: ring-outer-orbit var(--orbit-dur,14s) linear infinite;
+    }
+    .ring-outer-orbit img {
+      width: 393px; height: 393px;
+      animation: ring-outer-thickness var(--breathe-dur,3.8s) ease-in-out infinite;
+    }
+    /* inner breathing ring */
+    .ring-inner {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 270px; height: 270px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .ring-breath-layer {
+      position: absolute; inset: 0;
+      transform-origin: 50% 50%;
+      animation: ring-pulse-breathe var(--breathe-dur,3.8s) ease-in-out infinite, ring-inner-opacity var(--breathe-dur,3.8s) ease-in-out infinite;
+    }
+    .ring-tick-slot {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+    }
+    .ring-tick {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1.7px; height: 10px;
+      background: #e2e6ee;
+      border-radius: 1px;
+      transform: translate(-50%);
+      animation: ring-tick-breathe var(--breathe-dur,3.8s) ease-in-out infinite;
+    }
+
+    /* ── keyframes ── */
+    @keyframes ring-outer-orbit {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes ring-outer-thickness {
+      0%, 100% { opacity: 0.38; }
+      50%      { opacity: 0.72; }
+    }
+    @keyframes ring-pulse-breathe {
+      0%, 100% { transform: scale(0.98); }
+      50%      { transform: scale(1.05); }
+    }
+    @keyframes ring-inner-opacity {
+      0%, 100% { opacity: 0.58; filter: brightness(0.98); }
+      50%      { opacity: 0.74; filter: brightness(1.04) saturate(1.03) drop-shadow(0 0 0.6px rgba(198,218,255,0.16)); }
+    }
+    @keyframes ring-tick-breathe {
+      0%, 100% { opacity: 0.62; transform: translate(-50%) scaleX(1.12) scaleY(1.2); }
+      50%      { opacity: 0.94; transform: translate(-50%) scaleX(0.96) scaleY(0.82); }
+    }
+
+    /* ── Center status ── */
+    .center-status {
+      position: absolute;
+      left: 86px; top: 252px;
+      width: 222px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .center-status-title {
+      font-size: 32px; font-weight: 600; line-height: 40px; color: #fff;
+    }
+    .center-status-sub {
+      font-size: 16px; font-weight: 400; line-height: 20px;
+      color: rgba(255,255,255,0.4);
+    }
+    .online-badge {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      height: 38px; padding: 10px 18px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.08);
+    }
+    .online-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .online-text {
+      font-size: 14px; font-weight: 500; line-height: 18px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+      position: absolute;
+      left: 12px; top: 524px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      width: 369px;
+    }
+    .card {
+      height: 200px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.08);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: left;
+      cursor: pointer;
+      border: 0;
+      color: #fff;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    .card:hover { background: rgba(255,255,255,0.12); }
+    .card-top { display: flex; flex-direction: column; gap: 12px; }
+    .card-title {
+      font-size: 16px; font-weight: 400; line-height: 20px;
+      color: rgba(255,255,255,0.7);
+    }
+    .card-value-row {
+      display: flex; align-items: flex-end; gap: 6px;
+    }
+    .card-value {
+      font-size: 28px; font-weight: 600; line-height: 32px; color: #fff;
+    }
+    .card-unit {
+      font-size: 14px; font-weight: 400; line-height: 20px;
+      color: rgba(255,255,255,0.5);
+      padding-bottom: 1px;
+    }
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; font-weight: 400; line-height: 15px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Temp bar */
+    .temp-bar-wrap {
+      position: relative;
+      width: 143px; height: 50px;
+    }
+    .temp-gradient-green {
+      position: absolute; left: 0; top: 23px;
+      width: 71px; height: 27px;
+      background: linear-gradient(180deg, #509973, transparent);
+      opacity: 0.2;
+    }
+    .temp-gradient-yellow {
+      position: absolute; left: 73px; top: 23px;
+      width: 34px; height: 27px;
+      background: linear-gradient(180deg, #e2c581, transparent);
+      opacity: 0.2;
+    }
+    .temp-gradient-red {
+      position: absolute; left: 109px; top: 23px;
+      width: 34px; height: 27px;
+      background: linear-gradient(180deg, #c25f5b, transparent);
+      opacity: 0.2;
+    }
+    .temp-bar-green {
+      position: absolute; left: 0; top: 19px;
+      width: 71px; height: 8px;
+      border-radius: 8px 0 0 8px;
+      background: #53bb99;
+    }
+    .temp-bar-yellow {
+      position: absolute; left: 73px; top: 19px;
+      width: 34px; height: 8px;
+      background: #e2cc51;
+    }
+    .temp-bar-red {
+      position: absolute; left: 109px; top: 19px;
+      width: 33px; height: 8px;
+      border-radius: 0 8px 8px 0;
+      background: #f9635d;
+    }
+    .temp-pointer {
+      position: absolute; top: 0;
+      width: 23px; height: 23px;
+      transition: left 0.3s ease-out;
+    }
+    .temp-pointer.normal { left: 48px; }
+    .temp-pointer.fever { left: 114px; }
+    .temp-emoji {
+      width: 34px; height: 34px;
+      object-fit: contain;
+    }
+
+    /* Audio waveform */
+    .waveform {
+      display: flex; align-items: center; gap: 1px;
+      height: 59px;
+    }
+    .waveform span {
+      width: 2px;
+      border-radius: 9px;
+      background: #e9e8e4;
+    }
+
+    /* Edit card btn */
+    .edit-card-btn {
+      position: absolute;
+      left: 143px; top: 943px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px;
+      height: 42px; padding: 12px 16px;
+      border-radius: 48px;
+      background: rgba(255,255,255,0.05);
+      border: 0;
+      cursor: pointer;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px; font-weight: 500; line-height: 16px;
+      font-family: inherit;
+    }
+    .edit-card-btn img { width: 18px; height: 18px; opacity: 0.6; }
+
+    /* Sleep Guard */
+    .sleep-guard {
+      position: absolute;
+      left: 12px; top: 1009px;
+      width: 369px; height: 119px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.08);
+      padding: 18px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+    .sleep-guard-left { display: flex; flex-direction: column; gap: 16px; }
+    .sleep-guard-title {
+      font-size: 16px; font-weight: 400; line-height: 20px;
+      color: rgba(255,255,255,0.7);
+    }
+    .sleep-guard-time {
+      font-size: 20px; font-weight: 600; line-height: 28px; color: #fff;
+    }
+    .sleep-guard-sub {
+      font-size: 14px; font-weight: 400; line-height: 20px;
+      color: rgba(255,255,255,0.3);
+    }
+    .sleep-guard-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: #3bab86;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 0;
+      font-size: 24px; color: #fff;
+      font-family: inherit;
+    }
+
+    /* Tab bar */
+    .tab-bar-wrap {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      z-index: 30;
+      pointer-events: none;
+    }
+    .tab-bar {
+      margin: 0 12px 24px;
+      height: 72px;
+      border-radius: 54px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding: 9px;
+      position: relative;
+      pointer-events: auto;
+    }
+    .tab-bar-inner {
+      position: relative;
+      height: 54px; width: 100%;
+    }
+    .tab-active {
+      position: absolute;
+      left: 0; top: 0;
+      width: 102px; height: 54px;
+      border-radius: 77px;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px;
+      color: #000;
+      font-size: 15px; font-weight: 500;
+      cursor: pointer;
+    }
+    .tab-active img { width: 19px; height: 19px; }
+    .tab-icon {
+      position: absolute;
+      width: 24px; height: 24px;
+      top: 50%; transform: translateY(-50%);
+      cursor: pointer;
+      opacity: 0.8;
+    }
+    .tab-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Fever mode — faster ring via CSS variables */
+    .fever { --orbit-dur: 8.8s; --breathe-dur: 1.7s; }
+
+    /* Fever background */
+    .fever-bg-img {
+      position: absolute;
+      left: 0; right: 0; top: 0;
+      width: 393px; height: 524px;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    .fever-bg-img.show {
+      opacity: 1;
+      animation: fever-bg-micro-motion 4.2s ease-in-out infinite;
+    }
+    .fever-bg-overlay {
+      position: absolute;
+      left: 0; right: 0; top: 0;
+      width: 393px; height: 524px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(62% 42% at 52% 40%, rgba(255,92,92,0.3), transparent 74%),
+        radial-gradient(46% 34% at 43% 32%, rgba(255,160,78,0.22), transparent 72%);
+    }
+    .fever-bg-overlay.show {
+      opacity: 1;
+      animation: fever-bg-overlay-pulse 3.2s ease-in-out infinite;
+    }
+    @keyframes fever-bg-micro-motion {
+      0%, 100% { transform: translate(0) scale(1); }
+      50% { transform: translate(-4px, -3px) scale(1.02); }
+    }
+    @keyframes fever-bg-overlay-pulse {
+      0%, 100% { opacity: 0.18; transform: translate(0); }
+      50% { opacity: 0.52; transform: translate(3px, -2px) scale(1.04); }
+    }
+
+    @media (max-width: 599px) {
+      body { display: block; padding: 0; background: #e5e5e5; min-height: unset; }
+      .phone-stage { padding: 0; border-radius: 0; background: transparent; box-shadow: none; }
+      .screen { width: 100%; max-width: 100vw; height: auto; min-height: 100vh; min-height: 100dvh; border-radius: 0; overflow-x: hidden; }
+    }
+  </style>
+</head>
+<body>
+<div class="phone-stage">
+  <div class="screen" id="screen">
+    <div class="scroll-area" id="scrollArea">
+      <div style="position:relative;height:1248px;width:393px;overflow-x:hidden;">
+        <!-- Background -->
+        <div class="bg-base"></div>
+        <div class="bg-top-gradient"></div>
+        <div class="bg-blob-1"></div>
+        <div class="bg-blob-2"></div>
+        <div class="bg-blob-3"></div>
+
+        <!-- Fever BG -->
+        <img src="figma-monitor/top-bg-fever@3x.png" class="fever-bg-img" id="feverBgImg" alt="" />
+        <div class="fever-bg-overlay" id="feverBgOverlay"></div>
+
+        <!-- Stars & Moon -->
+        <img src="figma-monitor/top-stars.svg" class="top-stars" alt="" />
+        <img src="figma-monitor/moon.svg" class="top-moon" alt="" />
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="status-time"><span id="timeDisplay">9:41</span></div>
+          <div class="status-spacer"></div>
+          <div class="status-icons">
+            <div class="status-icons-inner">
+              <img src="figma-monitor/icon-mobile-signal.svg" style="width:18px;height:12px;" alt="" />
+              <img src="figma-monitor/wifi.svg" style="width:17px;height:12px;" alt="" />
+              <div class="battery-wrap">
+                <img src="figma-monitor/battery-outline.svg" class="battery-outline" alt="" />
+                <img src="figma-monitor/battery-end.svg" class="battery-end" alt="" />
+                <img src="figma-monitor/battery-fill.svg" class="battery-fill" alt="" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+          <div class="header-left">
+            <div class="avatar-wrap">
+              <img src="figma-monitor/avatar-bg@3x.png" class="avatar-bg" alt="" />
+              <img src="figma-monitor/avatar-photo@3x.png" class="avatar-photo" alt="" />
+            </div>
+            <div>
+              <div class="header-name">Emma</div>
+              <div class="header-sub">15 months, 9 days</div>
+            </div>
+          </div>
+          <img src="figma-monitor/menu-grid.svg" class="menu-btn" alt="" />
+        </div>
+
+        <!-- Ring -->
+        <div class="ring-container" id="ringContainer">
+          <div class="ring-outer-orbit">
+            <img src="figma-monitor/outer-frame.png" alt="" />
+          </div>
+          <div class="ring-inner">
+            <div class="ring-breath-layer" id="ringBreathLayer"></div>
+          </div>
+        </div>
+
+        <!-- Center Status -->
+        <div class="center-status">
+          <div class="center-status-title" id="statusTitle">Asleep</div>
+          <div class="center-status-sub" id="statusSub">for 4:09:33</div>
+          <div class="online-badge">
+            <span class="online-dot"></span>
+            <span class="online-text">Online</span>
+          </div>
+        </div>
+
+        <!-- Cards -->
+        <div class="cards-grid">
+          <!-- Temperature -->
+          <button class="card" id="tempCard">
+            <div class="card-top">
+              <div class="card-title">Temperature</div>
+              <img src="figma-monitor/emoji-smile@3x.png" class="temp-emoji" id="tempEmoji" alt="" />
+              <div class="temp-bar-wrap">
+                <div class="temp-gradient-green"></div>
+                <div class="temp-gradient-yellow"></div>
+                <div class="temp-gradient-red"></div>
+                <div class="temp-bar-green"></div>
+                <div class="temp-bar-yellow"></div>
+                <div class="temp-bar-red"></div>
+                <img src="figma-monitor/temperature-pointer@3x.png" class="temp-pointer normal" id="tempPointer" alt="" />
+              </div>
+            </div>
+            <div class="card-footer"><span>Just now</span></div>
+          </button>
+
+          <!-- Heart Rate -->
+          <button class="card">
+            <div class="card-top">
+              <div class="card-title">Heart Rate</div>
+              <div class="card-value-row">
+                <span class="card-value">96</span><span class="card-unit">bpm</span>
+              </div>
+              <img src="figma-monitor/heart-rate-chart@3x.png" style="width:141px;height:48px;object-fit:contain;" alt="" />
+            </div>
+            <div class="card-footer"><span>Just now</span><span>50-150 bpm</span></div>
+          </button>
+
+          <!-- Audio Clips -->
+          <button class="card">
+            <div class="card-top">
+              <div class="card-title">Audio Clips</div>
+              <div class="card-value-row">
+                <span class="card-value">4</span><span class="card-unit">clips</span>
+              </div>
+              <div class="waveform" id="waveform"></div>
+            </div>
+            <div class="card-footer"><span>Just now</span></div>
+          </button>
+
+          <!-- Breathing Rate -->
+          <button class="card">
+            <div class="card-top">
+              <div class="card-title">Breathing Rate</div>
+              <div class="card-value-row">
+                <span class="card-value">32</span><span class="card-unit">/min</span>
+              </div>
+              <img src="figma-monitor/breathing-chart-design@3x.png" style="width:144px;height:59px;object-fit:contain;" alt="" />
+            </div>
+            <div class="card-footer"><span>Just now</span><span>24-40 /min</span></div>
+          </button>
+        </div>
+
+        <!-- Edit card -->
+        <button class="edit-card-btn">
+          <img src="figma-monitor/edit-card-icon@3x.png" alt="" />
+          Edit card
+        </button>
+
+        <!-- Sleep Guard -->
+        <div class="sleep-guard">
+          <div class="sleep-guard-left">
+            <span class="sleep-guard-title">Sleep Guard</span>
+            <div>
+              <div class="sleep-guard-time">18:00-08:00</div>
+              <div class="sleep-guard-sub">Every day</div>
+            </div>
+          </div>
+          <button class="sleep-guard-btn">⏻</button>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar-wrap">
+          <div class="tab-bar">
+            <div class="tab-bar-inner">
+              <div class="tab-active">
+                <img src="figma-monitor/tab-home-selected.svg" alt="" />
+                Home
+              </div>
+              <div class="tab-icon" style="left:132px;">
+                <img src="figma-monitor/tab-icon-2.svg" alt="" />
+              </div>
+              <div class="tab-icon" style="left:192px;">
+                <img src="figma-monitor/tab-icon-3.svg" alt="" />
+              </div>
+              <div class="tab-icon" style="left:252px;">
+                <img src="figma-monitor/tab-message-final@3x.png" alt="" />
+              </div>
+              <div class="tab-icon" style="left:312px;">
+                <img src="figma-monitor/tab-profile-final@3x.png" alt="" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Time update ──
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('timeDisplay').textContent =
+      now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+  }
+  updateTime();
+  setInterval(updateTime, 30000);
+
+  // ── Render ring ticks ──
+  const ringBreathLayer = document.getElementById('ringBreathLayer');
+  const TICK_COUNT = 144;
+  for (let i = 0; i < TICK_COUNT; i++) {
+    const angle = (i * 360) / TICK_COUNT;
+    const slot = document.createElement('span');
+    slot.className = 'ring-tick-slot';
+    slot.style.transform = `rotate(${angle}deg) translateY(-129px)`;
+    const tick = document.createElement('span');
+    tick.className = 'ring-tick';
+    slot.appendChild(tick);
+    ringBreathLayer.appendChild(slot);
+  }
+
+  // ── Sleep timer ──
+  let sleepSeconds = 4 * 3600 + 9 * 60 + 33;
+  function updateSleepTime() {
+    sleepSeconds++;
+    const h = Math.floor(sleepSeconds / 3600);
+    const m = Math.floor((sleepSeconds % 3600) / 60);
+    const s = sleepSeconds % 60;
+    document.getElementById('statusSub').textContent =
+      'for ' + h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+  setInterval(updateSleepTime, 1000);
+
+  // ── Fever mode toggle ──
+  let isFever = false;
+  const tempCard = document.getElementById('tempCard');
+  const tempPointer = document.getElementById('tempPointer');
+  const tempEmoji = document.getElementById('tempEmoji');
+  const statusTitle = document.getElementById('statusTitle');
+  const statusSub = document.getElementById('statusSub');
+  const ringContainer = document.getElementById('ringContainer');
+  const feverBgImg = document.getElementById('feverBgImg');
+  const feverBgOverlay = document.getElementById('feverBgOverlay');
+
+  tempCard.addEventListener('click', () => {
+    isFever = !isFever;
+    if (isFever) {
+      tempPointer.className = 'temp-pointer fever';
+      statusTitle.textContent = '100.4°F';
+      statusSub.textContent = 'For 0:12:33';
+      ringContainer.classList.add('fever');
+      feverBgImg.classList.add('show');
+      feverBgOverlay.classList.add('show');
+      tempEmoji.src = 'figma-monitor/fever-emoji@3x.png';
+    } else {
+      tempPointer.className = 'temp-pointer normal';
+      statusTitle.textContent = 'Asleep';
+      ringContainer.classList.remove('fever');
+      feverBgImg.classList.remove('show');
+      feverBgOverlay.classList.remove('show');
+      tempEmoji.src = 'figma-monitor/emoji-smile@3x.png';
+    }
+  });
+
+  // ── Audio waveform ──
+  const waveform = document.getElementById('waveform');
+  const bars = [11, 7, 3, 7, 11, 7, 13, 3, 7, 11, 13, 23, 13, 7, 3, 11, 3, 15, 11, 7, 3, 7, 7, 11];
+  bars.forEach(h => {
+    const span = document.createElement('span');
+    span.style.height = h + 'px';
+    waveform.appendChild(span);
+  });
+
+  // ── Scroll to cards on load ──
+  document.getElementById('scrollArea').scrollTop = 500;
+</script>
+</body>
+</html>
