@@ -19,9 +19,6 @@
 
 static const char *TAG = "es7210_drv";
 
-/* [临时] 设为 1 使用原厂寄存器序列, 0 还原 */
-#define ES7210_USE_ALT_PROBE  1
-
 /* ═══════════════════════════════════════════════════════════════
  * ES7210 寄存器地址 (已在 es7210_drv.h 中定义的直接使用, 此处仅
  * 保留 .h 中未提供的寄存器)
@@ -33,20 +30,6 @@ static const char *TAG = "es7210_drv";
 #define ES7210_REG0B                 0x0B
 #define ES7210_REG0D                 0x0D
 #define ES7210_REG0F                 0x0F
-
-/* ═══════════════════════════════════════════════════════════════
- * 内部结构
- * ═══════════════════════════════════════════════════════════════ */
-typedef struct {
-    i2c_master_dev_handle_t i2c_dev;
-    i2s_chan_handle_t       tx_chan;
-    i2s_chan_handle_t       rx_chan;
-    uint32_t                sample_rate;
-    uint8_t                 mic_count;      /* 有效 MIC 通道数 */
-    uint8_t                 mic_channels[4]; /* 已使能的通道号 (0-based) */
-    uint8_t                 total_slots;    /* I2S 总 slot 数 */
-    bool                    is_es7210l;     /* 芯片版本 */
-} es7210_drv_t;
 
 /* ═══════════════════════════════════════════════════════════════
  * I2C 寄存器读写
@@ -215,6 +198,16 @@ static esp_err_t i2s_init(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     return ret;
 }
 
+static esp_err_t es7210_reset(es7210_drv_t *drv)
+{
+    esp_err_t ret;
+    ret  = write_reg(drv, ES7210_RESET_REG00, 0xFF);
+    vTaskDelay(pdMS_TO_TICKS(10));  // 硬件复位只需要至少1ms，这里预留，delay 10ms 确保稳定
+    ret |= write_reg(drv, ES7210_RESET_REG00, 0x0); // TODO: 先按照0x0配置试试
+    return ret;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════
  * ES7210 探头初始化 (参考 Everest_probe)
  * ═══════════════════════════════════════════════════════════════ */
@@ -223,9 +216,24 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     esp_err_t ret;
 
     /* 1. 复位 */
-    ret  = write_reg(drv, ES7210_RESET_REG00, 0xFF);
-    vTaskDelay(pdMS_TO_TICKS(5));
-    ret |= write_reg(drv, ES7210_RESET_REG00, 0x32);
+    ret  = es7210_reset(drv);
+    if (ret) return ESP_FAIL;
+
+    /* 2. 主/从 时钟配置 从模式，时钟由esp32s3提供*/
+    /* Mode: Slave, no TDM, no EQ, BCLK no-invert */
+    ret = write_reg(drv, ES7210_MODE_CONFIG_REG08, 0x00);
+    if (ret) return ESP_FAIL; 
+
+     /* 3. 时钟: MCLK=4.096MHz, LRCK=16kHz, Ratio=256 */
+    ret  = write_reg(drv, ES7210_MAINCLK_REG02,    0xC1);  /*将 MCLK 倍频 2 倍后送入 ADC 调制器*/
+    ret |= write_reg(drv, ES7210_MASTER_CLK_REG03, 0x04);  /*时钟来源选 外部引脚 MCLK  将 MCLK 4 分频得到 BCLK = 1.024MHz*/
+    /*reg04和reg05在ES7210 slave模式下不使用，
+    在 Slave 模式下写入 256，作用是告诉芯片内部数字滤波器 BCLK 与 LRCK 的期望比例为 256:1
+    */
+    ret |= write_reg(drv, ES7210_LRCK_DIVH_REG04,  0x01);   /* Ratio high */
+    ret |= write_reg(drv, ES7210_LRCK_DIVL_REG05,  0x00);   /* Ratio low */
+
+    ret |= write_reg(drv, ES7210_OSR_REG07,        0x20);   /*配置ADC过采样率=32*/
     if (ret) return ESP_FAIL;
 
     /* 2. 时间控制 */
@@ -240,17 +248,9 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     ret |= write_reg(drv, ES7210_ADC12_HPF1_REG23, 0x2A);
     if (ret) return ESP_FAIL;
 
-    /* 4. 时钟: MCLK=4.096MHz, LRCK=16kHz, Ratio=256 */
-    ret  = write_reg(drv, ES7210_MAINCLK_REG02,    0xC1);
-    ret |= write_reg(drv, ES7210_MASTER_CLK_REG03, 0x04);
-    ret |= write_reg(drv, ES7210_LRCK_DIVH_REG04,  0x01);   /* Ratio high */
-    ret |= write_reg(drv, ES7210_LRCK_DIVL_REG05,  0x00);   /* Ratio low */
-    ret |= write_reg(drv, ES7210_OSR_REG07,        0x20);
-    if (ret) return ESP_FAIL;
+   
 
-    /* 5. Mode: Slave, no TDM, no EQ, BCLK no-invert */
-    ret = write_reg(drv, ES7210_MODE_CONFIG_REG08, 0x00);
-    if (ret) return ESP_FAIL;
+    
 
     /* 6. Audio format: S16_LE, I2S standard */
     ret = write_reg(drv, ES7210_SDP_INTERFACE1_REG11, 0x60);
@@ -284,13 +284,8 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
 
     /* 12. MIC 电源 (按芯片版本区分配置) */
     uint8_t mic_pwr_val, mic_pwr_mask;
-    if (drv->is_es7210l) {
-        mic_pwr_val  = 0x26;   /* ES7210L */
-        mic_pwr_mask = 0x06;
-    } else {
-        mic_pwr_val  = 0x3E;   /* ES7210 */
-        mic_pwr_mask = 0x1E;
-    }
+    mic_pwr_val  = 0x3E;   /* ES7210 */
+    mic_pwr_mask = 0x1E;
     ret  = write_reg(drv, ES7210_MIC1_POWER_REG47, mic_pwr_val);
     ret |= write_reg(drv, ES7210_MIC2_POWER_REG48, mic_pwr_mask);
     ret |= write_reg(drv, ES7210_MIC3_POWER_REG49, mic_pwr_val);
@@ -321,96 +316,6 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * [临时] 替代探头配置 — 寄存器序列来自原厂参考
- *
- * 切换方式: 在 es7210_drv_init 中将 es7210_probe 替换为
- *          es7210_probe_alt 即可
- * ═══════════════════════════════════════════════════════════════ */
-static esp_err_t es7210_probe_alt(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
-{
-    esp_err_t ret;
-
-    /* ── 1. 复位 ────────────────────────────────────────────── */
-    ret  = write_reg(drv, ES7210_RESET_REG00, 0xFF);
-    ret |= write_reg(drv, ES7210_RESET_REG00, 0x32);
-    if (ret) return ESP_FAIL;
-
-    /* ── 2. 启动时间 ─────────────────────────────────────────── */
-    ret  = write_reg(drv, ES7210_TIME_CONTROL0_REG09, 0x30);
-    ret |= write_reg(drv, ES7210_TIME_CONTROL1_REG0A, 0x30);
-    if (ret) return ESP_FAIL;
-
-    /* ── 3. HPF 系数 (4路 ADC 高通滤波) ─────────────────────── */
-    ret  = write_reg(drv, ES7210_ADC12_HPF1_REG23, 0x2A);
-    ret |= write_reg(drv, ES7210_ADC12_HPF2_REG22,  0x0A);
-    ret |= write_reg(drv, ES7210_ADC34_HPF1_REG21, 0x2A);
-    ret |= write_reg(drv, ES7210_ADC34_HPF2_REG20,  0x0A);
-    if (ret) return ESP_FAIL;
-
-    /* ── 4. I2S 格式: 16-bit, TDM I2S ──────────────────────── */
-    ret  = write_reg(drv, ES7210_SDP_INTERFACE1_REG11, 0x60);         /* 16-bit I2S */
-    ret |= write_reg(drv, ES7210_SDP_INTERFACE2_REG12,
-                     (cfg->total_slots > 2) ? 0x02 : 0x00); /* TDM I2S=0x02 */
-    if (ret) return ESP_FAIL;
-
-    /* ── 5. 模拟电源 VMID ───────────────────────────────────── */
-    ret = write_reg(drv, ES7210_ANALOG_REG40, 0xC3);
-    if (ret) return ESP_FAIL;
-
-    /* ── 6. MIC bias 电压 ────────────────────────────────────── */
-    ret  = write_reg(drv, ES7210_MIC12_BIAS_REG41, 0x70);      /* 2.87V */
-    ret |= write_reg(drv, ES7210_MIC34_BIAS_REG42, 0x70);
-    if (ret) return ESP_FAIL;
-
-    /* ── 7. PGA 增益 ─────────────────────────────────────────── */
-    uint8_t pga_val = 0x10 | (cfg->pga_gain & 0x0F);
-    ret  = write_reg(drv, ES7210_MIC1_GAIN_REG43, pga_val);
-    ret |= write_reg(drv, ES7210_MIC2_GAIN_REG44, pga_val);
-    ret |= write_reg(drv, ES7210_MIC3_GAIN_REG45, pga_val);
-    ret |= write_reg(drv, ES7210_MIC4_GAIN_REG46, pga_val);
-    if (ret) return ESP_FAIL;
-
-    /* ── 8. MIC 单路电源 ─────────────────────────────────────── */
-    ret  = write_reg(drv, ES7210_MIC1_POWER_REG47, 0x08);
-    ret |= write_reg(drv, ES7210_MIC2_POWER_REG48, 0x08);
-    ret |= write_reg(drv, ES7210_MIC3_POWER_REG49, 0x08);
-    ret |= write_reg(drv, ES7210_MIC4_POWER_REG4A, 0x08);
-    if (ret) return ESP_FAIL;
-
-    /* ── 9. 采样率时钟分频 (16kHz, MCLK=256×LRCK) ──────────── */
-    ret  = write_reg(drv, ES7210_MAINCLK_REG02,   0xC1);
-    ret |= write_reg(drv, ES7210_OSR_REG07,       0x20);
-    ret |= write_reg(drv, ES7210_MASTER_CLK_REG03, 0x04);
-    ret |= write_reg(drv, ES7210_LRCK_DIVH_REG04, 0x01);
-    ret |= write_reg(drv, ES7210_LRCK_DIVL_REG05, 0x00);
-    if (ret) return ESP_FAIL;
-
-    /* ── 10. DLL 下电 (ESP-BSP 标准: 0x04) ──────────────────── */
-    ret = write_reg(drv, ES7210_POWER_DOWN_REG06, 0x04);
-    if (ret) return ESP_FAIL;
-
-    /* ── 11. MIC bias + ADC + PGA 上电 ──────────────────────── */
-    ret  = write_reg(drv, ES7210_MIC12_POWER_REG4B, 0x0F);
-    ret |= write_reg(drv, ES7210_MIC34_POWER_REG4C, 0x0F);
-    if (ret) return ESP_FAIL;
-
-    /* ── 12. 数字音量: 0dB ───────────────────────────────────── */
-    ret  = write_reg(drv, ES7210_ADC4_DIRECT_DB_REG1E, 0xBF);
-    ret |= write_reg(drv, ES7210_ADC3_DIRECT_DB_REG1D, 0xBF);
-    ret |= write_reg(drv, ES7210_ADC2_DIRECT_DB_REG1C, 0xBF);
-    ret |= write_reg(drv, ES7210_ADC1_DIRECT_DB_REG1B, 0xBF);
-    if (ret) return ESP_FAIL;
-
-    /* ── 13. 使能 ADC (REG00: 0x71 → 0x41) ──────────────────── */
-    ret  = write_reg(drv, ES7210_RESET_REG00, 0x71);
-    ret |= write_reg(drv, ES7210_RESET_REG00, 0x41);
-    if (ret) return ESP_FAIL;
-
-    ESP_LOGI(TAG, "ES7210 probe_alt 完成 (ESP-BSP 标准序列)");
-    return ESP_OK;
-}
-
-/* ═══════════════════════════════════════════════════════════════
  * ES7210 上电 (参考 Everest_set_bias_on)
  * ═══════════════════════════════════════════════════════════════ */
 static esp_err_t es7210_power_on(es7210_drv_t *drv)
@@ -420,7 +325,7 @@ static esp_err_t es7210_power_on(es7210_drv_t *drv)
     esp_err_t ret = write_reg(drv, ES7210_CLOCK_OFF_REG01, 0x00);
     if (ret) return ESP_FAIL;
 
-#if !ES7210_USE_ALT_PROBE
+
     ret  = write_reg(drv, ES7210_POWER_DOWN_REG06, 0x00);
     ret |= write_reg(drv, ES7210_ANALOG_REG40,      0x42);
     ret |= write_reg(drv, ES7210_REG0B,             0x02);
@@ -432,7 +337,6 @@ static esp_err_t es7210_power_on(es7210_drv_t *drv)
     vTaskDelay(pdMS_TO_TICKS(5));
     ret |= write_reg(drv, ES7210_RESET_REG00, 0x01);
     if (ret) return ESP_FAIL;
-#endif
 
     ESP_LOGI(TAG, "ES7210 上电完成");
     return ESP_OK;
@@ -517,11 +421,6 @@ int es7210_drv_read(es7210_drv_handle_t handle, int16_t *buf, int samples)
     }
     return (int)(bytes_read / (sizeof(int16_t) * slots));
 }
-
-#define DUMP_REG(name) do { \
-    read_reg(drv, name, &val); \
-    ESP_LOGI(TAG, "  %-18s (0x%02X) = 0x%02X", #name, name, val); \
-} while(0)
 
 void es7210_drv_dump_regs(es7210_drv_handle_t handle)
 {
