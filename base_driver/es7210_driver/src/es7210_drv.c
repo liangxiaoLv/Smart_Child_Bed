@@ -32,6 +32,25 @@ static const char *TAG = "es7210_drv";
 #define ES7210_REG0F                 0x0F
 
 /* ═══════════════════════════════════════════════════════════════
+ * 内部结构
+ * ═══════════════════════════════════════════════════════════════ */
+typedef struct {
+    i2c_master_dev_handle_t i2c_dev;
+    i2s_chan_handle_t       tx_chan;
+    i2s_chan_handle_t       rx_chan;
+    uint32_t                sample_rate;
+    uint8_t                 mic_count;      /* 有效 MIC 通道数 */
+    uint8_t                 mic_channels[4]; /* 已使能的通道号 (0-based) */
+    uint8_t                 total_slots;    /* I2S 总 slot 数 */
+    bool                    is_es7210l;     /* 芯片版本 */
+} es7210_drv_t;
+
+#define DUMP_REG(name) do { \
+    read_reg(drv, name, &val); \
+    ESP_LOGI(TAG, "  %-18s (0x%02X) = 0x%02X", #name, name, val); \
+} while(0)
+
+/* ═══════════════════════════════════════════════════════════════
  * I2C 寄存器读写
  * ═══════════════════════════════════════════════════════════════ */
 static esp_err_t write_reg(es7210_drv_t *drv, uint8_t reg, uint8_t val)
@@ -220,7 +239,7 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     if (ret) return ESP_FAIL;
 
     /* 2. 主/从 时钟配置 从模式，时钟由esp32s3提供*/
-    /* Mode: Slave, no TDM, no EQ, BCLK no-invert */
+    /* Mode: Slave, TDM I2S, no EQ, BCLK no-invert */
     ret = write_reg(drv, ES7210_MODE_CONFIG_REG08, 0x00);
     if (ret) return ESP_FAIL; 
 
@@ -256,8 +275,8 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     ret = write_reg(drv, ES7210_SDP_INTERFACE1_REG11, 0x60);
     if (ret) return ESP_FAIL;
 
-    /* 7. TDM/SDOUT: no TDM, SDOUT non-tri-state */
-    ret = write_reg(drv, ES7210_SDP_INTERFACE2_REG12, 0x04);
+    /* 7. TDM/SDOUT: TDM I2S 模式, 所有通道到 SDOUT1 */
+    ret = write_reg(drv, ES7210_SDP_INTERFACE2_REG12, 0x02);
     if (ret) return ESP_FAIL;
 
     /* 8. 解除静音 (0x00 = all unmuted) */
@@ -299,9 +318,9 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     if (cfg->mic_mask & ES7210_DRV_SEL_MIC3) write_reg(drv, ES7210_MIC3_GAIN_REG45, pga_val);
     if (cfg->mic_mask & ES7210_DRV_SEL_MIC4) write_reg(drv, ES7210_MIC4_GAIN_REG46, pga_val);
 
-    /* 14. 数字音量: 191 = 0dB (按使能通道) */
+    /* 14. 数字音量: 191 = 0dB (按使能通道, MICn→ADCn 顺序映射) */
     for (int i = 0; i < drv->mic_count; i++) {
-        uint8_t vol_reg = ES7210_ADC4_DIRECT_DB_REG1E - drv->mic_channels[i];  /* 0x1E→ADC1, 0x1D→ADC2, ... */
+        uint8_t vol_reg = ES7210_ADC1_DIRECT_DB_REG1B + drv->mic_channels[i];  /* 0x1B→ADC1, 0x1C→ADC2, ... */
         write_reg(drv, vol_reg, 191);
     }
 
@@ -320,8 +339,7 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
  * ═══════════════════════════════════════════════════════════════ */
 static esp_err_t es7210_power_on(es7210_drv_t *drv)
 {
-    /* probe_alt 已在步骤10写 REG06=0x04(DLL下电), 步骤13写 REG00=0x71/0x41(使能ADC)
-     * 这里只需开启所有 ADC 时钟 (CLOCK_OFF寄存器写0x00=全部开启) */
+    /* probe 阶段已完成寄存器配置, 这里开启 ADC 时钟 + 模拟上电 */
     esp_err_t ret = write_reg(drv, ES7210_CLOCK_OFF_REG01, 0x00);
     if (ret) return ESP_FAIL;
 
@@ -334,7 +352,7 @@ static esp_err_t es7210_power_on(es7210_drv_t *drv)
     if (ret) return ESP_FAIL;
 
     ret  = write_reg(drv, ES7210_RESET_REG00, 0x31);
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(pdMS_TO_TICKS(10));
     ret |= write_reg(drv, ES7210_RESET_REG00, 0x01);
     if (ret) return ESP_FAIL;
 
@@ -371,11 +389,7 @@ esp_err_t es7210_drv_init(const es7210_drv_config_t *cfg, es7210_drv_handle_t *h
     if (ret != ESP_OK) goto fail_i2s;
 
     /* ── 3. ES7210 探头 + 配置寄存器 ─────────────────────────── */
-#if ES7210_USE_ALT_PROBE
-    ret = es7210_probe_alt(drv, cfg);
-#else
     ret = es7210_probe(drv, cfg);
-#endif
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "ES7210 probe fail");
         goto fail_probe;

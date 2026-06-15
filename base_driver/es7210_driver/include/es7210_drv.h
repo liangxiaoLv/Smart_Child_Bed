@@ -128,22 +128,6 @@ typedef struct {
     uint8_t  total_slots;                 /* I2S 总 slot 数 (2=STD立体声, 4=TDM四通道) */
 } es7210_drv_config_t;
 
-#define DUMP_REG(name) do { \
-    read_reg(drv, name, &val); \
-    ESP_LOGI(TAG, "  %-18s (0x%02X) = 0x%02X", #name, name, val); \
-} while(0)
-
-typedef struct {
-    i2c_master_dev_handle_t i2c_dev;
-    i2s_chan_handle_t       tx_chan;
-    i2s_chan_handle_t       rx_chan;
-    uint32_t                sample_rate;
-    uint8_t                 mic_count;      /* 有效 MIC 通道数 */
-    uint8_t                 mic_channels[4]; /* 已使能的通道号 (0-based) */
-    uint8_t                 total_slots;    /* I2S 总 slot 数 */
-    bool                    is_es7210l;     /* 芯片版本 */
-} es7210_drv_t;
-
 /**
  * @brief  初始化 ES7210 + I2S 并上电
  *
