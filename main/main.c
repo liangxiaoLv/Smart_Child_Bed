@@ -74,15 +74,18 @@ void app_main(void)
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
 
-    // uart1 使用体温传感器
-    uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
-    IRTemp_start();
+    // // uart1 使用体温传感器
+    // uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
+    // IRTemp_start();
 
+    // // uart2 使用毫米波雷达
+    // uartDriver_switch_device(UART2_PORT_NUM, UART2_DEVICE_RADAR);
+    // mm_wave_radar_info();
 
 
     
     
-    micSample_start(i2c0_bus);
+    // micSample_start(i2c0_bus);
 
 
 

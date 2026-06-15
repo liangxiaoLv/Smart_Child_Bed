@@ -66,38 +66,46 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
         }
         break;
 
-    case 0x02:  /* 心跳包 / 实时数据包 (5字节, 5秒周期) */
+    case 0x02:  /* 心跳包 / 实时体征数据 (5字节, 5秒周期) */
         if (len >= 5) {
+            /* ── 人体存在状态 ── */
             const char *person;
             switch (data[0]) {
             case 0: person = "无人";   break;
-            case 1: person = "有人";   break;
-            case 2: person = "干扰";   break;
+            case 1: person = "有人静止"; break;
+            case 2: person = "有人活动"; break;
             default: person = "未知";  break;
             }
 
+            /* ── 体动等级 ── */
             const char *motion;
             switch (data[3]) {
-            case 0: motion = "无体动"; break;
-            case 1: motion = "小体动"; break;
-            case 2: motion = "大体动"; break;
-            default: motion = "未知";  break;
+            case 0: motion = "无"; break;
+            case 1: motion = "小"; break;
+            case 2: motion = "大"; break;
+            default: motion = "?";  break;
             }
 
+            /* ── 模组工作状态 ── */
             const char *modStatus;
             switch (data[4]) {
-            case 0: modStatus = "未监测(无报告)"; break;
-            case 1: modStatus = "监测中";         break;
-            case 2: modStatus = "未监测(有报告)"; break;
-            case 3: modStatus = "等待时间输入";   break;
-            default: modStatus = "未知";          break;
+            case 0: modStatus = "空闲";       break;
+            case 1: modStatus = "监测中";     break;
+            case 2: modStatus = "未监测";     break;
+            case 3: modStatus = "等待授时";   break;
+            default: modStatus = "?";         break;
             }
 
-            ESP_LOGI(TAG, "体征: %s | 呼吸 %d | 心率 %d | %s | 状态:%s",
-                     person, data[1], data[2], motion, modStatus);
+            ESP_LOGI(TAG, "═══ 实时体征 ═══");
+            ESP_LOGI(TAG, "  状态: %s | 体动: %s | 模组: %s",
+                     person, motion, modStatus);
+            ESP_LOGI(TAG, "  呼吸: %d 次/分 | 心率: %d 次/分",
+                     data[1], data[2]);
+            ESP_LOGI(TAG, "  RAW: %02X %02X %02X %02X %02X",
+                     data[0], data[1], data[2], data[3], data[4]);
 
-            trans2cloud_updateRadarFull(data[0], data[1], data[2],
-                                        data[3], data[4]);
+            // trans2cloud_updateRadarFull(data[0], data[1], data[2],
+            //                             data[3], data[4]);
         }
         break;
 
@@ -147,7 +155,7 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
         if (len >= 1) {
             ESP_LOGI(TAG, "睡眠监测: %s",
                      data[0] ? "开始记录" : "失败(已在记录中?)");
-            trans2cloud_updateSleepRecord(data[0] != 0);
+            // trans2cloud_updateSleepRecord(data[0] != 0);
 
             /* 开始成功后主动发送当前时间 */
             if (data[0]) {
@@ -178,7 +186,7 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
             ESP_LOGI(TAG, "睡眠记录: %s",
                      data[0] ? "已结束" : "失败(未开启或无有效时间?)");
             if (data[0]) {
-                trans2cloud_updateSleepRecord(false);
+                // trans2cloud_updateSleepRecord(false);
             }
         }
         break;
@@ -217,11 +225,11 @@ static void handleFrame(uint8_t cmd, uint16_t len, const uint8_t *data)
                 .bed_mins = bed_mins, .sleep_mins = sleep_mins,
                 .awake_mins = awake_mins, .move_cnt = move_cnt,
             };
-            trans2cloud_updateSleepReport(&report);
+            // trans2cloud_updateSleepReport(&report);
         } else if (len == 1) {
             ESP_LOGI(TAG, "睡眠报告: %s",
                      data[0] ? "有数据" : "无有效睡眠数据(未结束或未监测到有效睡眠)");
-            trans2cloud_updateSleepReportEmpty();
+            // trans2cloud_updateSleepReportEmpty();
         }
         break;
 

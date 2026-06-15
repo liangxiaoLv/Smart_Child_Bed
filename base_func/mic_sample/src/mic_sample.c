@@ -91,7 +91,7 @@ esp_err_t micSample_start(void *bus)
         .i2c_bus     = bus,
         .mic_mask    = ES7210_DRV_SEL_MIC1,
         .sample_rate = 16000,
-        .pga_gain    = 10,     /* 30dB = 10 × 3dB */
+        .pga_gain    = 6,      /* 18dB = 6 × 3dB */
         .total_slots = 2,      /* 标准 I2S 立体声 */
         .mclk_io     = ES7210_I2S_MCLK_PIN,
         .bclk_io     = ES7210_I2S_BCLK_PIN,

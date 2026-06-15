@@ -260,16 +260,14 @@ static esp_err_t es7210_probe(es7210_drv_t *drv, const es7210_drv_config_t *cfg)
     ret |= write_reg(drv, ES7210_TIME_CONTROL1_REG0A, 0x20);
     if (ret) return ESP_FAIL;
 
-    /* 3. HPF + Cross + Invert */
-    ret  = write_reg(drv, ES7210_ADC34_HPF2_REG20, 0x0A);
-    ret |= write_reg(drv, ES7210_ADC34_HPF1_REG21, 0x2A);
-    ret |= write_reg(drv, ES7210_ADC12_HPF2_REG22, 0x0A);
-    ret |= write_reg(drv, ES7210_ADC12_HPF1_REG23, 0x2A);
+    /* 3. HPF: fast settling + auto offset (datasheet defaults, 低噪优化) */
+    /*  HPF1: OFFSET auto-update=0, COEF1=6(fast)   HPF2: COEF2=6(fast) */
+    ret  = write_reg(drv, ES7210_ADC34_HPF2_REG20, 0x06);
+    ret |= write_reg(drv, ES7210_ADC34_HPF1_REG21, 0x06);
+    ret |= write_reg(drv, ES7210_ADC12_HPF2_REG22, 0x06);
+    ret |= write_reg(drv, ES7210_ADC12_HPF1_REG23, 0x06);
     if (ret) return ESP_FAIL;
 
-   
-
-    
 
     /* 6. Audio format: S16_LE, I2S standard */
     ret = write_reg(drv, ES7210_SDP_INTERFACE1_REG11, 0x60);

@@ -90,9 +90,9 @@
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
-#define RADAR_UART_NUM      1               /* 雷达使用 UART1 */
-#define RADAR_RX_PIN        GPIO_NUM_5      /* 雷达 UART 接收 */
-#define RADAR_TX_PIN        GPIO_NUM_4      /* 雷达 UART 发送 */
+#define RADAR_UART_NUM      UART2_PORT_NUM              /* 雷达使用 UART1 */
+#define RADAR_RX_PIN        UART2_RX_PIN      /* 雷达 UART 接收 */
+#define RADAR_TX_PIN        UART2_TX_PIN      /* 雷达 UART 发送 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
 #define RADAR_RX_BUF_SIZE   2048            /* 雷达 UART RX 缓冲区 */
 
@@ -197,5 +197,5 @@
 #define ES7210_I2S_MCLK_PIN  GPIO_NUM_3     /* 主时钟 */
 #define ES7210_I2S_BCLK_PIN  GPIO_NUM_46    /* 位时钟 */
 #define ES7210_I2S_LRCK_PIN  GPIO_NUM_9     /* 左右声道时钟 */
-#define ES7210_I2S_DIN_PIN   GPIO_NUM_10    /* ADC 数据 (ES7210 DOUT → ESP32 DIN) */
+#define ES7210_I2S_DIN_PIN   GPIO_NUM_14    /* ADC 数据 (ES7210 SDOUT1 → ESP32 DIN) */
 #define ES7210_INT_PIN       GPIO_NUM_12    /* 中断输出 */

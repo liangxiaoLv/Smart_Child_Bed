@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能儿童床云服务器管理平台 - 智眠云管</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ========== CSS Reset & Custom Properties ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #3b82f6;
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-width: 240px;
+
+  --content-bg: #f1f5f9;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  --accent-blue: #3b82f6;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #f59e0b;
+  --accent-purple: #8b5cf6;
+  --accent-cyan: #06b6d4;
+  --accent-pink: #ec4899;
+
+  --status-online: #22c55e;
+  --status-offline: #94a3b8;
+  --status-sleeping: #8b5cf6;
+
+  --severity-info: #3b82f6;
+  --severity-warning: #f59e0b;
+  --severity-critical: #ef4444;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+
+  --topbar-height: 56px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-areas: "sidebar topbar" "sidebar main";
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  background: var(--content-bg);
+  line-height: 1.5;
+}
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ========== Sidebar ========== */
+#sidebar {
+  grid-area: sidebar;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform var(--transition-normal);
+}
+
+.sidebar-logo {
+  padding: var(--space-lg) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.sidebar-logo .logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.sidebar-logo .logo-text {
+  color: #fff;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-logo .logo-sub {
+  color: var(--sidebar-text);
+  font-size: var(--font-size-xs);
+  margin-top: -2px;
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: var(--space-sm);
+  flex: 1;
+}
+
+.sidebar-nav li { margin-bottom: 2px; }
+
+.sidebar-nav a {
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: 10px 14px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  position: relative;
+}
+
+.sidebar-nav a:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+.sidebar-nav a.active {
+  background: rgba(59,130,246,0.15);
+  color: var(--sidebar-text-active);
+  font-weight: 600;
+}
+.sidebar-nav a.active::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px;
+  background: var(--accent-blue);
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar-nav svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+.sidebar-footer {
+  padding: var(--space-md);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  color: var(--sidebar-text);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ========== TopBar ========== */
+#topbar {
+  grid-area: topbar;
+  background: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--space-lg);
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: var(--shadow-sm);
+  z-index: 50;
+}
+
+#topbar .breadcrumb {
+  display: flex; align-items: center; gap: var(--space-sm);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#topbar .breadcrumb svg { width: 16px; height: 16px; color: var(--text-muted); }
+
+.topbar-right {
+  display: flex; align-items: center; gap: var(--space-md);
+}
+
+#live-clock {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  background: var(--content-bg);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.notification-bell {
+  position: relative;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--content-bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.notification-bell:hover { background: #e2e8f0; }
+.notification-bell svg { width: 18px; height: 18px; color: var(--text-secondary); }
+.notification-bell .badge {
+  position: absolute; top: -2px; right: -2px;
+  min-width: 18px; height: 18px;
+  background: var(--accent-red);
+  color: #fff; font-size: 10px; font-weight: 700;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+}
+
+/* ========== Main Content ========== */
+#app-main {
+  grid-area: main;
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+/* ========== Cards ========== */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.card-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ========== Stat Cards ========== */
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  cursor: default;
+}
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.stat-card .stat-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card .stat-info { flex: 1; margin-left: var(--space-md); }
+.stat-card .stat-label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: 4px; }
+.stat-card .stat-value { font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+.stat-card .stat-sub { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 4px; }
+
+.stat-icon.blue { background: #eff6ff; color: var(--accent-blue); }
+.stat-icon.green { background: #f0fdf4; color: var(--accent-green); }
+.stat-icon.red { background: #fef2f2; color: var(--accent-red); }
+.stat-icon.purple { background: #faf5ff; color: var(--accent-purple); }
+.stat-icon svg { width: 22px; height: 22px; }
+
+/* ========== Tables ========== */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+table thead th {
+  background: #f8fafc;
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+table thead th:hover { color: var(--text-primary); }
+table thead th .sort-arrow { font-size: 10px; margin-left: 3px; opacity: 0.4; }
+table thead th.sorted .sort-arrow { opacity: 1; color: var(--accent-blue); }
+
+table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+table tbody tr {
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+table tbody tr:hover { background: #f8fafc; }
+table tbody tr.row-critical {
+  border-left: 3px solid var(--accent-red);
+  background: #fef2f2;
+}
+
+/* ========== Badges ========== */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.badge-online { background: #f0fdf4; color: #16a34a; }
+.badge-online::before { background: var(--status-online); }
+.badge-offline { background: #f8fafc; color: #64748b; }
+.badge-offline::before { background: var(--status-offline); }
+.badge-sleeping { background: #faf5ff; color: #7c3aed; }
+.badge-sleeping::before { background: var(--status-sleeping); }
+
+.badge-info { background: #eff6ff; color: #2563eb; }
+.badge-info::before { background: var(--severity-info); }
+.badge-warning { background: #fffbeb; color: #d97706; }
+.badge-warning::before { background: var(--severity-warning); }
+.badge-critical { background: #fef2f2; color: #dc2626; }
+.badge-critical::before { background: var(--severity-critical); }
+
+.badge-ack { background: #f0fdf4; color: #16a34a; }
+.badge-unack { background: #fef2f2; color: #dc2626; }
+
+/* ========== Buttons ========== */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn svg { width: 16px; height: 16px; }
+.btn-primary { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.btn-primary:hover { background: #2563eb; }
+.btn-outline { background: #fff; color: var(--text-primary); border-color: var(--card-border); }
+.btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+.btn-sm { padding: 4px 10px; font-size: var(--font-size-sm); }
+.btn-xs { padding: 3px 8px; font-size: var(--font-size-xs); }
+.btn-success { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
+.btn-success:hover { background: #16a34a; }
+.btn-danger { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+.btn-danger:hover { background: #dc2626; }
+
+/* ========== Forms ========== */
+.search-box {
+  display: flex; align-items: center;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  transition: border-color var(--transition-fast);
+}
+.search-box:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.search-box svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+.search-box input {
+  border: none; outline: none;
+  padding: 8px 10px;
+  font-size: var(--font-size-md);
+  font-family: inherit;
+  width: 220px;
+  background: transparent;
+}
+
+select {
+  padding: 7px 30px 7px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+select:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+/* ========== Filter Pills ========== */
+.filter-pills {
+  display: flex; gap: var(--space-xs); flex-wrap: wrap;
+}
+.filter-pill {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border: 1px solid var(--card-border);
+  background: #fff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+.filter-pill:hover { border-color: #cbd5e1; color: var(--text-primary); }
+.filter-pill.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+.page-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+/* ========== Pagination ========== */
+.pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+}
+.pagination button {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: #fff;
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+.pagination button:hover:not(:disabled) { border-color: var(--accent-blue); color: var(--accent-blue); }
+.pagination button.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); font-weight: 600; }
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ========== Modal ========== */
+#modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+#modal-overlay.show { display: flex; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+#modal-content {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--card-border);
+  position: sticky; top: 0; background: #fff;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 1;
+}
+.modal-header h2 { font-size: var(--font-size-xl); font-weight: 600; }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--content-bg);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition-fast);
+  font-size: 18px; color: var(--text-secondary);
+}
+.modal-close:hover { background: #e2e8f0; }
+
+.modal-body { padding: var(--space-lg); }
+
+.modal-detail-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+.modal-detail-row .detail-label { color: var(--text-secondary); font-size: var(--font-size-sm); }
+.modal-detail-row .detail-value { font-weight: 500; text-align: right; }
+
+/* ========== Toast ========== */
+#toast-container {
+  position: fixed; top: 16px; right: 16px;
+  z-index: 300;
+  display: flex; flex-direction: column;
+  gap: var(--space-sm);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex; align-items: flex-start; gap: var(--space-sm);
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid var(--accent-blue);
+  max-width: 380px;
+  pointer-events: auto;
+  animation: slideInRight 0.3s ease;
+  font-size: var(--font-size-md);
+}
+.toast.critical { border-left-color: var(--accent-red); }
+.toast.warning { border-left-color: var(--accent-yellow); }
+.toast.removing { animation: slideOutRight 0.3s ease forwards; }
+
+@keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideOutRight { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+
+.toast-icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+.toast-body { flex: 1; }
+.toast-title { font-weight: 600; font-size: var(--font-size-sm); margin-bottom: 2px; }
+.toast-msg { color: var(--text-secondary); font-size: var(--font-size-xs); }
+
+/* ========== Dashboard Charts Grid ========== */
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.dashboard-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.chart-wrap { position: relative; width: 100%; }
+.chart-wrap canvas { width: 100% !important; }
+
+/* ========== Device Detail ========== */
+.detail-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent-blue); font-weight: 500;
+  cursor: pointer; margin-bottom: var(--space-md);
+  font-size: var(--font-size-md);
+  border: none; background: none; font-family: inherit;
+}
+.detail-back:hover { text-decoration: underline; }
+.detail-back svg { width: 16px; height: 16px; }
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.telemetry-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  padding: var(--space-md);
+  text-align: center;
+  transition: box-shadow var(--transition-fast);
+}
+.telemetry-card:hover { box-shadow: var(--shadow-md); }
+.telemetry-card .tel-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 8px;
+}
+.telemetry-card .tel-icon svg { width: 16px; height: 16px; }
+.telemetry-card .tel-value { font-size: var(--font-size-xl); font-weight: 700; }
+.telemetry-card .tel-unit { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: 400; }
+.telemetry-card .tel-label { font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; }
+
+.detail-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+/* ========== Empty State ========== */
+.empty-state {
+  text-align: center; padding: 48px 20px; color: var(--text-muted);
+}
+.empty-state svg { width: 64px; height: 64px; margin-bottom: var(--space-md); opacity: 0.3; }
+.empty-state p { font-size: var(--font-size-lg); }
+
+/* ========== Responsive ========== */
+@media (max-width: 1400px) {
+  .stat-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-charts { grid-template-columns: 1fr 1fr; }
+  .dashboard-bottom { grid-template-columns: 1fr 1fr; }
+  .telemetry-grid { grid-template-columns: repeat(3, 1fr); }
+  .detail-charts-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1024px) {
+  body { grid-template-columns: 60px 1fr; }
+  :root { --sidebar-width: 60px; }
+  .sidebar-logo .logo-text, .sidebar-logo .logo-sub,
+  .sidebar-nav a span, .sidebar-footer { display: none; }
+  .sidebar-nav a { justify-content: center; padding: 12px; }
+  .sidebar-nav a.active::before { display: none; }
+  .sidebar-logo { justify-content: center; padding: var(--space-md) var(--space-sm); }
+  .stat-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  body { grid-template-columns: 1fr; }
+  #sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  .stat-cards-grid { grid-template-columns: 1fr; }
+  .dashboard-charts, .dashboard-bottom { grid-template-columns: 1fr; }
+  .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-charts-grid { grid-template-columns: 1fr; }
+  .page-toolbar { flex-direction: column; align-items: stretch; }
+  .page-toolbar .search-box input { width: 100%; }
+  #topbar { padding: 0 var(--space-md); }
+  #app-main { padding: var(--space-md); }
+  .hamburger { display: flex !important; }
+}
+
+.hamburger {
+  display: none;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--content-bg);
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.hamburger svg { width: 20px; height: 20px; color: var(--text-secondary); }
+
+/* utility */
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.mt-md { margin-top: var(--space-md); }
+.mb-md { margin-bottom: var(--space-md); }
+.text-truncate { max-width: 180px; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ==================== Sidebar ==================== -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌙</div>
+    <div>
+      <div class="logo-text">智眠云管</div>
+      <div class="logo-sub">SmartCrib Cloud</div>
+    </div>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="#/dashboard" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>仪表板概览</span>
+    </a></li>
+    <li><a href="#/devices" data-page="devices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>设备管理</span>
+    </a></li>
+    <li><a href="#/users" data-page="users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+      <span>用户管理</span>
+    </a></li>
+    <li><a href="#/alerts" data-page="alerts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>告警中心</span>
+    </a></li>
+  </ul>
+  <div class="sidebar-footer">© 2026 智眠云管 v2.4.1</div>
+</nav>
+
+<!-- ==================== TopBar ==================== -->
+<header id="topbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="hamburger" id="hamburger-btn" title="菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="breadcrumb" id="breadcrumb">仪表板概览</div>
+  </div>
+  <div class="topbar-right">
+    <div id="live-clock">--</div>
+    <div class="notification-bell" id="notif-bell" title="通知">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="badge" id="notif-count" style="display:none">0</span>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== Main Content ==================== -->
+<main id="app-main"></main>
+
+<!-- ==================== Modal ==================== -->
+<div id="modal-overlay">
+  <div id="modal-content"></div>
+</div>
+
+<!-- ==================== Toast Container ==================== -->
+<div id="toast-container"></div>
+
+<script>
+// ==================== 1. Mock Data Generator ====================
+const SURNAMES = ['张','李','王','陈','刘','杨','黄','赵','周','吴','徐','孙','马','朱','胡','郭','何','高','林'];
+const GIVEN_NAMES = ['小明','子涵','雨桐','浩然','梓轩','一诺','思源','沐辰','佳怡','奕辰','诗涵','子轩','欣怡','宇轩','紫萱'];
+const CHILD_GIVEN = ['豆豆','果果','糖糖','乐乐','悠悠','安安','甜甜','小宝','圆圆','阳阳','朵朵','嘟嘟','跳跳','小贝','苗苗'];
+const ROOMS = ['主卧儿童区','儿童房A','儿童房B','宝宝房-东','卧室套间','次卧儿童区','婴儿房','游戏房','主卧','长辈房'];
+const ALERT_TYPES = [
+  { type:'体温异常', severity:'critical' },
+  { type:'心率异常', severity:'critical' },
+  { type:'湿度超标', severity:'warning' },
+  { type:'温度异常', severity:'warning' },
+  { type:'尿床检测', severity:'warning' },
+  { type:'设备离线', severity:'critical' },
+  { type:'睡眠不规律', severity:'info' },
+  { type:'固件更新', severity:'info' },
+  { type:'翻身频繁', severity:'info' },
+  { type:'呼吸异常', severity:'critical' },
+];
+
+function rand(min, max) { return +(min + Math.random() * (max - min)).toFixed(1); }
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pad(n) { return String(n).padStart(2,'0'); }
+function randomDate(daysBack) {
+  const d = new Date();
+  d.setHours(d.getHours() - randInt(0, daysBack * 24));
+  return d;
+}
+
+const STATUSES = ['online','online','online','online','online','online','online','online','sleeping','sleeping','offline'];
+const SLEEP_STATES = ['awake','light_sleep','deep_sleep','rem'];
+
+function generateSleepHistory() {
+  const data = [];
+  for (let h = 0; h < 24; h++) {
+    let state, score;
+    if (h >= 6 && h < 8) { state = 'awake'; score = randInt(20, 50); }
+    else if (h >= 8 && h < 12) { state = 'light_sleep'; score = randInt(50, 70); }
+    else if (h >= 12 && h < 14) { state = 'awake'; score = randInt(30, 60); }
+    else if (h >= 14 && h < 17) { state = 'light_sleep'; score = randInt(50, 70); }
+    else if (h >= 21 || h < 6) { state = pick(['deep_sleep','deep_sleep','deep_sleep','rem','light_sleep']); score = randInt(75, 98); }
+    else { state = pick(['awake','light_sleep']); score = randInt(40, 70); }
+    data.push({ hour: h, state, score });
+  }
+  return data;
+}
+
+function generateTempHistory(baseTemp) {
+  const data = [];
+  for (let h = 0; h < 24; h++) {
+    let v = baseTemp + (Math.sin((h - 6) * Math.PI / 12) * 2) + rand(-0.5, 0.5);
+    data.push({ hour: h, value: +v.toFixed(1) });
+  }
+  return data;
+}
+
+function generateHumidityHistory(baseHum) {
+  const data = [];
+  for (let h = 0; h < 24; h++) {
+    let v = baseHum + (Math.cos((h - 3) * Math.PI / 8) * 8) + rand(-3, 3);
+    v = Math.min(90, Math.max(30, v));
+    data.push({ hour: h, value: +v.toFixed(1) });
+  }
+  return data;
+}
+
+function generateDevices(n) {
+  const devices = [];
+  for (let i = 0; i < n; i++) {
+    const id = `DEV-${String(i+1).padStart(3,'0')}`;
+    const childName = pick(SURNAMES) + pick(CHILD_GIVEN);
+    const childAge = randInt(0, 7);
+    const status = i < 2 ? 'offline' : pick(STATUSES);
+    const baseTemp = rand(20, 27);
+    const baseHum = rand(42, 68);
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - randInt(0, 120));
+
+    devices.push({
+      id,
+      serialNumber: `SN-2026-${String.fromCharCode(65+i)}${String(randInt(100,999))}F`,
+      name: `智能儿童床 - ${['星星','月亮','太阳','云朵','彩虹','天使','海豚','小熊','小鹿','兔子'][i%10]}${['一号','二号','Plus','Pro','Mini','Max'][i%6]}`,
+      room: ROOMS[i % ROOMS.length],
+      status,
+      childName,
+      childAge,
+      childGender: Math.random() > 0.45 ? '男' : '女',
+      firmwareVersion: `v${randInt(1,3)}.${randInt(0,9)}.${randInt(0,9)}`,
+      lastActive: now,
+      temperature: baseTemp,
+      humidity: baseHum,
+      heartRate: randInt(65, 105),
+      respiratoryRate: randInt(18, 28),
+      weight: rand(9, 25),
+      bedWetness: Math.random() > 0.85 ? randInt(5, 40) : 0,
+      bodyMovement: pick(['low','low','low','medium','high']),
+      sleepState: status === 'sleeping' ? pick(['light_sleep','deep_sleep','rem']) : 'awake',
+      sleepHistory: generateSleepHistory(),
+      tempHistory: generateTempHistory(baseTemp),
+      humidityHistory: generateHumidityHistory(baseHum),
+    });
+  }
+  return devices;
+}
+
+function generateUsers(n) {
+  const users = [];
+  for (let i = 0; i < n; i++) {
+    const name = pick(SURNAMES) + (Math.random() > 0.5 ? pick(['建国','建华','志强','秀英','玉兰','桂英','卫东','爱华','振国','秀珍']) : pick(GIVEN_NAMES));
+    const phone = `${['138','139','150','151','186','187','177','135'][i%8]}****${String(randInt(1000,9999))}`;
+    const roles = ['父亲','母亲','母亲','母亲','父亲','监护人'];
+    const d = randomDate(400);
+    const lastLogin = new Date(); lastLogin.setHours(lastLogin.getHours() - randInt(0, 72));
+
+    users.push({
+      id: `USR-${String(i+1).padStart(3,'0')}`,
+      name,
+      phone,
+      email: `${phone.replace('****','')}@${pick(['qq.com','163.com','gmail.com','outlook.com','126.com'])}`.replace(/[^@]+@/,'user'+i+'@'),
+      role: roles[i % roles.length],
+      associatedDevices: [], // populated below
+      registrationDate: d,
+      lastLogin,
+    });
+  }
+  return users;
+}
+
+function generateAlerts(n, devices) {
+  const alerts = [];
+  const usedTypes = [...ALERT_TYPES];
+  for (let i = 0; i < n; i++) {
+    const device = pick(devices);
+    const at = pick(usedTypes);
+    const ts = randomDate(3);
+    const ack = i > 5; // first 6 unacknowledged
+    const msgs = {
+      '体温异常': `检测到儿童体温超过37.5°C，当前体温${rand(37.6,39.5).toFixed(1)}°C`,
+      '心率异常': `检测到心率${pick(['过快','过慢'])}，当前心率${randInt(40,140)}次/分钟`,
+      '湿度超标': `环境湿度${pick(['过高','过低'])}，当前湿度${rand(15,95).toFixed(0)}%`,
+      '温度异常': `房间温度异常，当前温度${rand(15,35).toFixed(1)}°C`,
+      '尿床检测': `检测到床垫湿度升高，疑似尿床，湿度值${randInt(30,80)}%`,
+      '设备离线': `设备 ${device.name} 已离线超过${randInt(5,120)}分钟`,
+      '睡眠不规律': `儿童睡眠模式出现偏差，与日常规律不符`,
+      '固件更新': `设备固件新版本 v${randInt(2,3)}.${randInt(0,9)}.${randInt(0,9)} 可供更新`,
+      '翻身频繁': `检测到儿童翻身频率增高，${randInt(8,20)}次/小时`,
+      '呼吸异常': `检测到呼吸频率异常，当前${randInt(12,40)}次/分钟`,
+    };
+
+    alerts.push({
+      id: `ALT-${String(i+1).padStart(3,'0')}`,
+      type: at.type,
+      severity: at.severity,
+      deviceId: device.id,
+      deviceName: device.name,
+      message: msgs[at.type],
+      timestamp: ts,
+      acknowledged: ack,
+      acknowledgedBy: ack ? pick(['张管理员','李运维','王护士']) : null,
+      acknowledgedAt: ack ? new Date(ts.getTime() + randInt(1,12) * 3600000) : null,
+    });
+  }
+  alerts.sort((a,b) => b.timestamp - a.timestamp);
+  return alerts;
+}
+
+// ==================== 2. App State ====================
+const AppState = {
+  currentPage: 'dashboard',
+  currentParams: {},
+  devices: [],
+  users: [],
+  alerts: [],
+  filters: {
+    devices: { search: '', status: 'all', sortKey: null, sortDir: 'asc', page: 1, pageSize: 10 },
+    users: { search: '', sortKey: null, sortDir: 'asc', page: 1, pageSize: 10 },
+    alerts: { severity: 'all', search: '', sortKey: null, sortDir: 'asc', page: 1, pageSize: 10 },
+  },
+  activeCharts: [],
+  sidebarOpen: false,
+};
+
+// ==================== 3. Router ====================
+const Router = {
+  init() {
+    window.addEventListener('hashchange', () => this.navigate());
+    if (!location.hash) location.hash = '#/dashboard';
+    this.navigate();
+  },
+
+  navigate() {
+    const hash = location.hash || '#/dashboard';
+    const match = this.matchRoute(hash);
+    if (!match) { location.hash = '#/dashboard'; return; }
+    AppState.currentPage = match.page;
+    AppState.currentParams = match.params;
+    this.destroyCharts();
+    this.renderPage();
+    this.updateSidebar();
+    this.updateBreadcrumb(match.title);
+  },
+
+  matchRoute(hash) {
+    // Static routes
+    const staticRoutes = {
+      '#/dashboard': { page: 'dashboard', title: '仪表板概览', params: {} },
+      '#/devices': { page: 'devices', title: '设备管理', params: {} },
+      '#/users': { page: 'users', title: '用户管理', params: {} },
+      '#/alerts': { page: 'alerts', title: '告警中心', params: {} },
+    };
+    if (staticRoutes[hash]) return staticRoutes[hash];
+    // Dynamic: #/device/:id
+    const devMatch = hash.match(/^#\/device\/(.+)$/);
+    if (devMatch) return { page: 'deviceDetail', title: '设备详情', params: { deviceId: devMatch[1] } };
+    return null;
+  },
+
+  destroyCharts() {
+    AppState.activeCharts.forEach(c => { try { c.destroy(); } catch(e) {} });
+    AppState.activeCharts = [];
+  },
+
+  renderPage() {
+    const main = document.getElementById('app-main');
+    switch (AppState.currentPage) {
+      case 'dashboard': renderDashboard(main); break;
+      case 'devices': renderDevices(main); break;
+      case 'deviceDetail': renderDeviceDetail(main, AppState.currentParams.deviceId); break;
+      case 'users': renderUsers(main); break;
+      case 'alerts': renderAlerts(main); break;
+      default: main.innerHTML = '<div class="empty-state"><p>页面不存在</p></div>';
+    }
+    // scroll to top
+    main.scrollTop = 0;
+  },
+
+  updateSidebar() {
+    document.querySelectorAll('.sidebar-nav a').forEach(a => {
+      a.classList.toggle('active', a.dataset.page === AppState.currentPage);
+    });
+  },
+
+  updateBreadcrumb(title) {
+    document.getElementById('breadcrumb').textContent = title;
+  },
+
+  navigateTo(hash) {
+    location.hash = hash;
+  }
+};
+
+// ==================== 4. Utility Helpers ====================
+function formatTime(d) {
+  if (typeof d === 'string') d = new Date(d);
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  const ss = pad(d.getSeconds());
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function formatDateCN(d) {
+  if (typeof d === 'string') d = new Date(d);
+  const weekdays = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+}
+
+function timeAgo(d) {
+  if (typeof d === 'string') d = new Date(d);
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins}分钟前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}小时前`;
+  return `${Math.floor(hours / 24)}天前`;
+}
+
+function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function statusBadge(status) {
+  const map = { online: ['在线','badge-online'], sleeping: ['睡眠中','badge-sleeping'], offline: ['离线','badge-offline'] };
+  const [label, cls] = map[status] || ['未知','badge-offline'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function severityBadge(severity) {
+  const map = { info: ['信息','badge-info'], warning: ['警告','badge-warning'], critical: ['严重','badge-critical'] };
+  const [label, cls] = map[severity] || ['未知','badge-info'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function ackBadge(ack) {
+  return ack
+    ? '<span class="badge badge-ack">已确认</span>'
+    : '<span class="badge badge-unack">未确认</span>';
+}
+
+// ==================== 5. Modal ====================
+function showModal(title, bodyHtml) {
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-header">
+      <h2>${title}</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+  `;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ==================== 6. Toast ====================
+function showToast(title, msg, severity) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${severity || ''}`;
+  const icons = { critical:'🔴', warning:'🟡', info:'🔵' };
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[severity] || '🔵'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${escapeHtml(title)}</div>
+      <div class="toast-msg">${escapeHtml(msg)}</div>
+    </div>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// ==================== 7. Live Clock ====================
+function updateClock() {
+  const now = new Date();
+  const dateStr = formatDateCN(now);
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  document.getElementById('live-clock').textContent = `${dateStr} ${timeStr}`;
+}
+
+// ==================== 8. Pagination Helper ====================
+function renderPagination(total, page, pageSize, onPage) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return '';
+  let html = '<div class="pagination">';
+  html += `<button ${page===1?'disabled':''} onclick="(${onPage.toString()})(${page-1})">‹</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    if (totalPages > 7 && (i > 1 && i < page - 1 && i !== 2)) {
+      if (i === Math.max(2, page - 2)) html += '<button disabled>…</button>';
+      continue;
+    }
+    if (totalPages > 7 && i > page + 1 && i < totalPages) {
+      if (i === totalPages - 1) html += '<button disabled>…</button>';
+      continue;
+    }
+    html += `<button class="${i===page?'active':''}" onclick="(${onPage.toString()})(${i})">${i}</button>`;
+  }
+  html += `<button ${page===totalPages?'disabled':''} onclick="(${onPage.toString()})(${page+1})">›</button>`;
+  html += '</div>';
+  return html;
+}
+
+// ==================== 9. Chart Helpers ====================
+function makeChart(canvasId, config) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  const chart = new Chart(ctx, config);
+  AppState.activeCharts.push(chart);
+  return chart;
+}
+
+// ==================== 10. Page Renderers ====================
+
+// --- Dashboard ---
+function renderDashboard(main) {
+  const devs = AppState.devices;
+  const alerts = AppState.alerts;
+  const totalDevices = devs.length;
+  const onlineCount = devs.filter(d => d.status === 'online' || d.status === 'sleeping').length;
+  const offlineCount = devs.filter(d => d.status === 'offline').length;
+  const sleepingCount = devs.filter(d => d.status === 'sleeping').length;
+  const activeAlerts = alerts.filter(a => !a.acknowledged);
+  const criticalCount = activeAlerts.filter(a => a.severity === 'critical').length;
+  const avgSleep = (devs.reduce((s,d) => s + d.sleepHistory.filter(h => h.state !== 'awake').length * (60/24), 0) / totalDevices).toFixed(1);
+  const avgTemp = (devs.reduce((s,d) => s + d.temperature, 0) / totalDevices).toFixed(1);
+
+  main.innerHTML = `
+    <div class="stat-cards-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="stat-info">
+          <div class="stat-label">设备总数</div>
+          <div class="stat-value">${totalDevices}</div>
+          <div class="stat-sub">在线 ${onlineCount} / 离线 ${offlineCount}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <div class="stat-info">
+          <div class="stat-label">在线设备</div>
+          <div class="stat-value">${onlineCount}</div>
+          <div class="stat-sub">占比 ${(onlineCount/totalDevices*100).toFixed(0)}% / 睡眠中 ${sleepingCount} 台</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <div class="stat-info">
+          <div class="stat-label">活跃告警</div>
+          <div class="stat-value">${activeAlerts.length}</div>
+          <div class="stat-sub">其中严重 ${criticalCount} 条</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+        <div class="stat-info">
+          <div class="stat-label">平均睡眠时长</div>
+          <div class="stat-value">${avgSleep}<span style="font-size:14px;font-weight:400;color:#64748b;">h</span></div>
+          <div class="stat-sub">平均温度 ${avgTemp}°C</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-charts">
+      <div class="card">
+        <div class="card-header"><h3>近7天睡眠质量趋势</h3></div>
+        <div class="chart-wrap"><canvas id="chart-sleep-trend"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>最近告警</h3></div>
+        <div style="max-height:300px;overflow-y:auto;">
+          ${activeAlerts.slice(0,6).map(a => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;" onclick="location.hash='#/alerts'">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(a.message)}</div>
+                <div style="font-size:11px;color:#94a3b8;">${escapeHtml(a.deviceName)} · ${timeAgo(a.timestamp)}</div>
+              </div>
+              <div style="flex-shrink:0;margin-left:8px;">${severityBadge(a.severity)}</div>
+            </div>
+          `).join('')}
+          ${activeAlerts.length === 0 ? '<div class="empty-state"><p style="font-size:13px;">暂无活跃告警 🎉</p></div>' : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-bottom">
+      <div class="card">
+        <div class="card-header"><h3>设备状态分布</h3></div>
+        <div class="chart-wrap" style="max-height:240px;"><canvas id="chart-status-pie"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>告警严重级别分布</h3></div>
+        <div class="chart-wrap" style="max-height:240px;"><canvas id="chart-severity-doughnut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>设备平均温度</h3></div>
+        <div class="chart-wrap" style="max-height:240px;"><canvas id="chart-temp-gauge"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  // Sleep trend chart
+  const weekdays = ['周一','周二','周三','周四','周五','周六','周日'];
+  const deepData = weekdays.map(() => rand(5, 8));
+  const lightData = weekdays.map(() => rand(2, 4));
+  const awakeData = weekdays.map(() => rand(0.2, 0.8));
+
+  makeChart('chart-sleep-trend', {
+    type: 'line',
+    data: {
+      labels: weekdays,
+      datasets: [
+        { label: '深度睡眠', data: deepData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+        { label: '浅度睡眠', data: lightData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.06)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#3b82f6' },
+        { label: '清醒', data: awakeData, borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.04)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#94a3b8' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: { size: 12 } } }
+      },
+      scales: {
+        y: { title: { display: true, text: '小时(h)', font: { size: 11 } }, ticks: { font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+        x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      },
+    }
+  });
+
+  // Status pie
+  makeChart('chart-status-pie', {
+    type: 'doughnut',
+    data: {
+      labels: ['在线', '睡眠中', '离线'],
+      datasets: [{
+        data: [onlineCount - sleepingCount, sleepingCount, offlineCount],
+        backgroundColor: ['#22c55e', '#8b5cf6', '#94a3b8'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } } }
+    }
+  });
+
+  // Severity doughnut
+  const sevInfo = alerts.filter(a => a.severity === 'info' && !a.acknowledged).length;
+  const sevWarn = alerts.filter(a => a.severity === 'warning' && !a.acknowledged).length;
+  const sevCrit = alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length;
+  makeChart('chart-severity-doughnut', {
+    type: 'doughnut',
+    data: {
+      labels: ['信息', '警告', '严重'],
+      datasets: [{
+        data: [sevInfo, sevWarn, sevCrit],
+        backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } } }
+    }
+  });
+
+  // Temp gauge (doughnut as gauge)
+  makeChart('chart-temp-gauge', {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [avgTemp - 15, 35 - avgTemp],
+        backgroundColor: ['#3b82f6', '#f1f5f9'],
+        borderWidth: 0,
+        circumference: 270,
+        rotation: 225,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      }
+    },
+    plugins: [{
+      id: 'gaugeText',
+      afterDraw(chart) {
+        const { ctx, width, height } = chart;
+        ctx.save();
+        ctx.font = 'bold 28px ' + getComputedStyle(document.body).fontFamily;
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${avgTemp}°C`, width/2, height/2 - 8);
+        ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('平均温度', width/2, height/2 + 18);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+// --- Devices ---
+function renderDevices(main) {
+  const f = AppState.filters.devices;
+  let devs = [...AppState.devices];
+  if (f.search) {
+    const s = f.search.toLowerCase();
+    devs = devs.filter(d => d.name.toLowerCase().includes(s) || d.id.toLowerCase().includes(s) || d.childName.toLowerCase().includes(s) || d.room.toLowerCase().includes(s) || d.serialNumber.toLowerCase().includes(s));
+  }
+  if (f.status !== 'all') {
+    devs = devs.filter(d => d.status === f.status);
+  }
+  if (f.sortKey) {
+    devs.sort((a,b) => {
+      let va = a[f.sortKey], vb = b[f.sortKey];
+      if (typeof va === 'string') va = va.toLowerCase(), vb = String(vb).toLowerCase();
+      return (va < vb ? -1 : va > vb ? 1 : 0) * (f.sortDir === 'asc' ? 1 : -1);
+    });
+  }
+  const total = devs.length;
+  const start = (f.page - 1) * f.pageSize;
+  const pageDevs = devs.slice(start, start + f.pageSize);
+
+  main.innerHTML = `
+    <div class="card">
+      <div class="page-toolbar">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="搜索设备名称、ID、儿童…" value="${escapeHtml(f.search)}" oninput="onDeviceSearch(this.value)" id="device-search">
+          </div>
+          <div class="filter-pills">
+            <button class="filter-pill ${f.status==='all'?'active':''}" onclick="onDeviceFilter('all')">全部</button>
+            <button class="filter-pill ${f.status==='online'?'active':''}" onclick="onDeviceFilter('online')">在线</button>
+            <button class="filter-pill ${f.status==='offline'?'active':''}" onclick="onDeviceFilter('offline')">离线</button>
+            <button class="filter-pill ${f.status==='sleeping'?'active':''}" onclick="onDeviceFilter('sleeping')">睡眠中</button>
+          </div>
+        </div>
+        <span style="color:var(--text-muted);font-size:13px;white-space:nowrap;">共 ${total} 台设备</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="onDeviceSort('id')" class="${f.sortKey==='id'?'sorted':''}">设备ID <span class="sort-arrow">${f.sortKey==='id'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th onclick="onDeviceSort('name')" class="${f.sortKey==='name'?'sorted':''}">设备名称 <span class="sort-arrow">${f.sortKey==='name'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th>房间</th>
+              <th>绑定儿童</th>
+              <th onclick="onDeviceSort('status')" class="${f.sortKey==='status'?'sorted':''}">状态 <span class="sort-arrow">${f.sortKey==='status'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th>温度</th>
+              <th>湿度</th>
+              <th>心跳</th>
+              <th>最后活跃</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pageDevs.map(d => `
+              <tr onclick="location.hash='#/device/${d.id}'">
+                <td style="font-family:monospace;font-size:12px;color:var(--accent-blue);">${d.id}</td>
+                <td>${escapeHtml(d.name)}</td>
+                <td>${escapeHtml(d.room)}</td>
+                <td>${escapeHtml(d.childName)} <span style="color:var(--text-muted);font-size:11px;">${d.childAge}岁</span></td>
+                <td>${statusBadge(d.status)}</td>
+                <td id="dev-temp-${d.id}">${d.temperature.toFixed(1)}°C</td>
+                <td id="dev-hum-${d.id}">${d.humidity.toFixed(0)}%</td>
+                <td id="dev-hr-${d.id}">${d.heartRate} bpm</td>
+                <td style="font-size:12px;color:var(--text-muted);">${timeAgo(d.lastActive)}</td>
+                <td><button class="btn btn-outline btn-xs" onclick="event.stopPropagation();location.hash='#/device/${d.id}'">详情</button></td>
+              </tr>
+            `).join('')}
+            ${pageDevs.length === 0 ? `<tr><td colspan="10"><div class="empty-state"><p>暂无匹配设备</p></div></td></tr>` : ''}
+          </tbody>
+        </table>
+      </div>
+      ${renderPagination(total, f.page, f.pageSize, 'onDevicePage')}
+    </div>
+  `;
+}
+
+function onDeviceSearch(v) {
+  AppState.filters.devices.search = v;
+  AppState.filters.devices.page = 1;
+  renderDevices(document.getElementById('app-main'));
+}
+function onDeviceFilter(status) {
+  AppState.filters.devices.status = status;
+  AppState.filters.devices.page = 1;
+  renderDevices(document.getElementById('app-main'));
+}
+function onDeviceSort(key) {
+  const f = AppState.filters.devices;
+  if (f.sortKey === key) f.sortDir = f.sortDir === 'asc' ? 'desc' : 'asc';
+  else { f.sortKey = key; f.sortDir = 'asc'; }
+  renderDevices(document.getElementById('app-main'));
+}
+function onDevicePage(p) {
+  AppState.filters.devices.page = p;
+  renderDevices(document.getElementById('app-main'));
+  document.getElementById('app-main').scrollTop = 0;
+}
+
+// --- Device Detail ---
+function renderDeviceDetail(main, deviceId) {
+  const d = AppState.devices.find(x => x.id === deviceId);
+  if (!d) {
+    main.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>设备 ${escapeHtml(deviceId)} 未找到</p><button class="btn btn-outline mt-md" onclick="location.hash='#/devices'">← 返回设备列表</button></div>`;
+    return;
+  }
+  const devAlerts = AppState.alerts.filter(a => a.deviceId === d.id).slice(0, 10);
+
+  const telIconColors = {
+    temperature: '#ef4444', humidity: '#3b82f6', heartRate: '#ec4899',
+    respiratoryRate: '#06b6d4', weight: '#22c55e', bedWetness: '#f59e0b'
+  };
+
+  main.innerHTML = `
+    <button class="detail-back" onclick="location.hash='#/devices'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      返回设备列表
+    </button>
+
+    <div class="card mb-md">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+        <div>
+          <h2 style="font-size:20px;font-weight:700;">${escapeHtml(d.name)}</h2>
+          <div style="color:var(--text-muted);font-size:13px;margin-top:4px;">
+            序列号: ${d.serialNumber} · 固件 ${d.firmwareVersion} · ${escapeHtml(d.room)}
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:11px;">👶 ${escapeHtml(d.childName)} · ${d.childAge}岁 · ${d.childGender}</span>
+            ${statusBadge(d.status)}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:var(--text-muted);">最后活跃</div>
+          <div id="detail-last-active" style="font-size:14px;font-weight:500;">${timeAgo(d.lastActive)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="telemetry-grid">
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#fef2f2;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.temperature}" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></div>
+        <div class="tel-value" id="tel-temp">${d.temperature.toFixed(1)}<span class="tel-unit">°C</span></div>
+        <div class="tel-label">温度</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#eff6ff;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.humidity}" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
+        <div class="tel-value" id="tel-hum">${d.humidity.toFixed(0)}<span class="tel-unit">%</span></div>
+        <div class="tel-label">湿度</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#fdf2f8;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.heartRate}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <div class="tel-value" id="tel-hr">${d.heartRate}<span class="tel-unit">bpm</span></div>
+        <div class="tel-label">心率</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#ecfeff;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.respiratoryRate}" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
+        <div class="tel-value" id="tel-rr">${d.respiratoryRate}<span class="tel-unit">次/分</span></div>
+        <div class="tel-label">呼吸率</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#f0fdf4;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.weight}" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><rect x="6" y="2" width="12" height="20" rx="2"/></svg></div>
+        <div class="tel-value" id="tel-wt">${d.weight.toFixed(1)}<span class="tel-unit">kg</span></div>
+        <div class="tel-label">体重</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="tel-icon" style="background:#fffbeb;"><svg viewBox="0 0 24 24" fill="none" stroke="${telIconColors.bedWetness}" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg></div>
+        <div class="tel-value" id="tel-wet">${d.bedWetness}<span class="tel-unit">%</span></div>
+        <div class="tel-label">尿床湿度</div>
+      </div>
+    </div>
+
+    <div class="detail-charts-grid">
+      <div class="card">
+        <div class="card-header"><h3>24小时睡眠状态</h3></div>
+        <div class="chart-wrap" style="height:300px;"><canvas id="chart-sleep-24h"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>24小时温湿度趋势</h3></div>
+        <div class="chart-wrap" style="height:300px;"><canvas id="chart-th-24h"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>该设备告警记录</h3></div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>告警ID</th><th>时间</th><th>级别</th><th>类型</th><th>消息</th><th>状态</th></tr></thead>
+          <tbody>
+            ${devAlerts.length === 0 ? '<tr><td colspan="6"><div class="empty-state"><p>暂无告警记录</p></div></td></tr>' : devAlerts.map(a => `
+              <tr class="${!a.acknowledged && a.severity==='critical' ? 'row-critical' : ''}" onclick="showModal('告警详情','<div class=modal-detail-row><span class=detail-label>告警ID</span><span class=detail-value>${a.id}</span></div><div class=modal-detail-row><span class=detail-label>时间</span><span class=detail-value>${formatTime(a.timestamp)}</span></div><div class=modal-detail-row><span class=detail-label>级别</span><span class=detail-value>${severityBadge(a.severity)}</span></div><div class=modal-detail-row><span class=detail-label>类型</span><span class=detail-value>${escapeHtml(a.type)}</span></div><div class=modal-detail-row><span class=detail-label>设备</span><span class=detail-value>${escapeHtml(a.deviceName)}</span></div><div class=modal-detail-row><span class=detail-label>消息</span><span class=detail-value>${escapeHtml(a.message)}</span></div><div class=modal-detail-row><span class=detail-label>状态</span><span class=detail-value>${ackBadge(a.acknowledged)}</span></div>${a.acknowledged ? `<div class=modal-detail-row><span class=detail-label>确认人</span><span class=detail-value>${escapeHtml(a.acknowledgedBy)}</span></div><div class=modal-detail-row><span class=detail-label>确认时间</span><span class=detail-value>${formatTime(a.acknowledgedAt)}</span></div>` : ''}')">
+                <td style="font-family:monospace;font-size:12px;">${a.id}</td>
+                <td style="font-size:12px;">${formatTime(a.timestamp)}</td>
+                <td>${severityBadge(a.severity)}</td>
+                <td>${escapeHtml(a.type)}</td>
+                <td class="text-truncate">${escapeHtml(a.message)}</td>
+                <td>${ackBadge(a.acknowledged)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Sleep 24h chart
+  const hours = d.sleepHistory.map(h => `${h.hour}:00`);
+  const sleepScores = d.sleepHistory.map(h => h.score);
+  const stateColors = d.sleepHistory.map(h => {
+    if (h.state === 'deep_sleep') return '#8b5cf6';
+    if (h.state === 'rem') return '#06b6d4';
+    if (h.state === 'light_sleep') return '#3b82f6';
+    return '#e2e8f0';
+  });
+
+  makeChart('chart-sleep-24h', {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [{
+        label: '睡眠质量评分',
+        data: sleepScores,
+        backgroundColor: stateColors,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `评分: ${ctx.raw}` } }
+      },
+      scales: {
+        y: { max: 100, title: { display: true, text: '评分', font: { size: 11 } }, ticks: { font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+        x: { ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Temp & Humidity
+  makeChart('chart-th-24h', {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: '温度 (°C)',
+          data: d.tempHistory.map(h => h.value),
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.06)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          yAxisID: 'y',
+        },
+        {
+          label: '湿度 (%)',
+          data: d.humidityHistory.map(h => h.value),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.06)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 11 } } } },
+      scales: {
+        y: { type: 'linear', position: 'left', title: { display: true, text: '°C', font: { size: 11 } }, ticks: { font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+        y1: { type: 'linear', position: 'right', title: { display: true, text: '%', font: { size: 11 } }, ticks: { font: { size: 10 } }, grid: { drawOnChartArea: false } },
+        x: { ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// --- Users ---
+function renderUsers(main) {
+  const f = AppState.filters.users;
+  let users = [...AppState.users];
+  if (f.search) {
+    const s = f.search.toLowerCase();
+    users = users.filter(u => u.name.toLowerCase().includes(s) || u.phone.includes(s) || u.email.toLowerCase().includes(s) || u.id.toLowerCase().includes(s));
+  }
+  if (f.sortKey) {
+    users.sort((a,b) => {
+      let va = a[f.sortKey], vb = b[f.sortKey];
+      if (typeof va === 'string') va = va.toLowerCase(), vb = String(vb).toLowerCase();
+      return (va < vb ? -1 : va > vb ? 1 : 0) * (f.sortDir === 'asc' ? 1 : -1);
+    });
+  }
+  const total = users.length;
+  const start = (f.page - 1) * f.pageSize;
+  const pageUsers = users.slice(start, start + f.pageSize);
+
+  main.innerHTML = `
+    <div class="card">
+      <div class="page-toolbar">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="搜索姓名、手机号、邮箱…" value="${escapeHtml(f.search)}" oninput="onUserSearch(this.value)">
+          </div>
+        </div>
+        <span style="color:var(--text-muted);font-size:13px;">共 ${total} 位用户</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="onUserSort('id')" class="${f.sortKey==='id'?'sorted':''}">用户ID <span class="sort-arrow">${f.sortKey==='id'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th onclick="onUserSort('name')" class="${f.sortKey==='name'?'sorted':''}">姓名 <span class="sort-arrow">${f.sortKey==='name'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th>手机号</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>关联设备</th>
+              <th>注册日期</th>
+              <th>最后登录</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pageUsers.map(u => {
+              const devNames = u.associatedDevices.map(did => {
+                const dev = AppState.devices.find(d => d.id === did);
+                return dev ? dev.name : did;
+              });
+              return `
+                <tr onclick="showUserDetail('${u.id}')">
+                  <td style="font-family:monospace;font-size:12px;color:var(--accent-blue);">${u.id}</td>
+                  <td style="font-weight:500;">${escapeHtml(u.name)}</td>
+                  <td>${u.phone}</td>
+                  <td style="font-size:12px;">${escapeHtml(u.email)}</td>
+                  <td>${escapeHtml(u.role)}</td>
+                  <td><span style="font-size:12px;color:var(--text-secondary);">${devNames.join(', ') || '无'}</span></td>
+                  <td style="font-size:12px;">${formatTime(u.registrationDate).split(' ')[0]}</td>
+                  <td style="font-size:12px;color:var(--text-muted);">${timeAgo(u.lastLogin)}</td>
+                </tr>
+              `;
+            }).join('')}
+            ${pageUsers.length === 0 ? '<tr><td colspan="8"><div class="empty-state"><p>暂无匹配用户</p></div></td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+      ${renderPagination(total, f.page, f.pageSize, 'onUserPage')}
+    </div>
+  `;
+}
+
+function onUserSearch(v) {
+  AppState.filters.users.search = v;
+  AppState.filters.users.page = 1;
+  renderUsers(document.getElementById('app-main'));
+}
+function onUserSort(key) {
+  const f = AppState.filters.users;
+  if (f.sortKey === key) f.sortDir = f.sortDir === 'asc' ? 'desc' : 'asc';
+  else { f.sortKey = key; f.sortDir = 'asc'; }
+  renderUsers(document.getElementById('app-main'));
+}
+function onUserPage(p) {
+  AppState.filters.users.page = p;
+  renderUsers(document.getElementById('app-main'));
+  document.getElementById('app-main').scrollTop = 0;
+}
+
+function showUserDetail(uid) {
+  const u = AppState.users.find(x => x.id === uid);
+  if (!u) return;
+  const devNames = u.associatedDevices.map(did => {
+    const dev = AppState.devices.find(d => d.id === did);
+    return dev ? `<a href="#/device/${did}" style="color:var(--accent-blue);">${escapeHtml(dev.name)}</a>` : did;
+  }).join('<br>') || '无';
+
+  showModal('用户详情', `
+    <div class="modal-detail-row"><span class="detail-label">用户ID</span><span class="detail-value" style="font-family:monospace;">${u.id}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">姓名</span><span class="detail-value">${escapeHtml(u.name)}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">手机号</span><span class="detail-value">${u.phone}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">邮箱</span><span class="detail-value">${escapeHtml(u.email)}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">角色</span><span class="detail-value">${escapeHtml(u.role)}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">关联设备</span><span class="detail-value">${devNames}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">注册日期</span><span class="detail-value">${formatTime(u.registrationDate)}</span></div>
+    <div class="modal-detail-row"><span class="detail-label">最后登录</span><span class="detail-value">${formatTime(u.lastLogin)}</span></div>
+  `);
+}
+
+// --- Alerts ---
+function renderAlerts(main) {
+  const f = AppState.filters.alerts;
+  let alerts = [...AppState.alerts];
+  if (f.severity !== 'all') alerts = alerts.filter(a => a.severity === f.severity);
+  if (f.search) {
+    const s = f.search.toLowerCase();
+    alerts = alerts.filter(a => a.message.toLowerCase().includes(s) || a.deviceName.toLowerCase().includes(s) || a.type.toLowerCase().includes(s) || a.id.toLowerCase().includes(s));
+  }
+  if (f.sortKey) {
+    alerts.sort((a,b) => {
+      let va = a[f.sortKey], vb = b[f.sortKey];
+      if (typeof va === 'string') va = va.toLowerCase(), vb = String(vb).toLowerCase();
+      return (va < vb ? -1 : va > vb ? 1 : 0) * (f.sortDir === 'asc' ? 1 : -1);
+    });
+  }
+  const total = alerts.length;
+  const start = (f.page - 1) * f.pageSize;
+  const pageAlerts = alerts.slice(start, start + f.pageSize);
+
+  main.innerHTML = `
+    <div class="card">
+      <div class="page-toolbar">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="filter-pills">
+            <button class="filter-pill ${f.severity==='all'?'active':''}" onclick="onAlertFilter('all')">全部</button>
+            <button class="filter-pill ${f.severity==='info'?'active':''}" onclick="onAlertFilter('info')">信息</button>
+            <button class="filter-pill ${f.severity==='warning'?'active':''}" onclick="onAlertFilter('warning')">警告</button>
+            <button class="filter-pill ${f.severity==='critical'?'active':''}" onclick="onAlertFilter('critical')">严重</button>
+          </div>
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="搜索告警内容、设备…" value="${escapeHtml(f.search)}" oninput="onAlertSearch(this.value)">
+          </div>
+        </div>
+        <span style="color:var(--text-muted);font-size:13px;">共 ${total} 条告警</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="onAlertSort('id')" class="${f.sortKey==='id'?'sorted':''}">告警ID <span class="sort-arrow">${f.sortKey==='id'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th onclick="onAlertSort('timestamp')" class="${f.sortKey==='timestamp'?'sorted':''}">时间 <span class="sort-arrow">${f.sortKey==='timestamp'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th onclick="onAlertSort('severity')" class="${f.sortKey==='severity'?'sorted':''}">级别 <span class="sort-arrow">${f.sortKey==='severity'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th>关联设备</th>
+              <th onclick="onAlertSort('type')" class="${f.sortKey==='type'?'sorted':''}">类型 <span class="sort-arrow">${f.sortKey==='type'?(f.sortDir==='asc'?'▲':'▼'):'⇅'}</span></th>
+              <th>消息</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pageAlerts.map(a => `
+              <tr class="${!a.acknowledged && a.severity==='critical' ? 'row-critical' : ''}">
+                <td style="font-family:monospace;font-size:12px;">${a.id}</td>
+                <td style="font-size:12px;">${formatTime(a.timestamp)}</td>
+                <td>${severityBadge(a.severity)}</td>
+                <td><a href="#/device/${a.deviceId}" style="color:var(--accent-blue);text-decoration:none;" onclick="event.stopPropagation();">${escapeHtml(a.deviceName)}</a></td>
+                <td>${escapeHtml(a.type)}</td>
+                <td class="text-truncate" style="max-width:260px;" title="${escapeHtml(a.message)}">${escapeHtml(a.message)}</td>
+                <td>${ackBadge(a.acknowledged)}</td>
+                <td>
+                  ${a.acknowledged
+                    ? `<span style="color:var(--text-muted);font-size:12px;">${escapeHtml(a.acknowledgedBy||'')}</span>`
+                    : `<button class="btn btn-success btn-xs" onclick="acknowledgeAlert('${a.id}')">确认</button>`
+                  }
+                </td>
+              </tr>
+            `).join('')}
+            ${pageAlerts.length === 0 ? '<tr><td colspan="8"><div class="empty-state"><p>暂无匹配告警</p></div></td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+      ${renderPagination(total, f.page, f.pageSize, 'onAlertPage')}
+    </div>
+  `;
+}
+
+function onAlertFilter(severity) {
+  AppState.filters.alerts.severity = severity;
+  AppState.filters.alerts.page = 1;
+  renderAlerts(document.getElementById('app-main'));
+}
+function onAlertSearch(v) {
+  AppState.filters.alerts.search = v;
+  AppState.filters.alerts.page = 1;
+  renderAlerts(document.getElementById('app-main'));
+}
+function onAlertSort(key) {
+  const f = AppState.filters.alerts;
+  if (f.sortKey === key) f.sortDir = f.sortDir === 'asc' ? 'desc' : 'asc';
+  else { f.sortKey = key; f.sortDir = 'asc'; }
+  renderAlerts(document.getElementById('app-main'));
+}
+function onAlertPage(p) {
+  AppState.filters.alerts.page = p;
+  renderAlerts(document.getElementById('app-main'));
+  document.getElementById('app-main').scrollTop = 0;
+}
+
+function acknowledgeAlert(id) {
+  const a = AppState.alerts.find(x => x.id === id);
+  if (!a || a.acknowledged) return;
+  a.acknowledged = true;
+  a.acknowledgedBy = '当前操作员';
+  a.acknowledgedAt = new Date();
+  updateNotifBadge();
+  renderAlerts(document.getElementById('app-main'));
+  showToast('告警已确认', `${a.type} - ${a.deviceName}`, 'info');
+}
+
+// ==================== 11. Live Simulator ====================
+function liveUpdateTelemetry() {
+  const devices = AppState.devices;
+  // Pick 3-5 random online devices
+  const onlineDevs = devices.filter(d => d.status !== 'offline');
+  const count = Math.min(randInt(3, 5), onlineDevs.length);
+  const shuffled = [...onlineDevs].sort(() => Math.random() - 0.5).slice(0, count);
+
+  shuffled.forEach(d => {
+    d.temperature = +(d.temperature + rand(-0.3, 0.3)).toFixed(1);
+    d.temperature = Math.min(30, Math.max(18, d.temperature));
+    d.humidity = +(d.humidity + rand(-1.5, 1.5)).toFixed(1);
+    d.humidity = Math.min(85, Math.max(30, d.humidity));
+    d.heartRate = randInt(Math.max(60, d.heartRate - 2), Math.min(110, d.heartRate + 2));
+    d.respiratoryRate = randInt(Math.max(14, d.respiratoryRate - 1), Math.min(32, d.respiratoryRate + 1));
+    d.lastActive = new Date();
+
+    // Update DOM if on relevant pages
+    const tempEl = document.getElementById(`tel-temp`);
+    const humEl = document.getElementById(`tel-hum`);
+    const hrEl = document.getElementById(`tel-hr`);
+    const rrEl = document.getElementById(`tel-rr`);
+    const laEl = document.getElementById(`detail-last-active`);
+
+    // Only update detail page if it's the current device
+    if (AppState.currentPage === 'deviceDetail' && AppState.currentParams.deviceId === d.id) {
+      if (tempEl) tempEl.innerHTML = `${d.temperature.toFixed(1)}<span class="tel-unit">°C</span>`;
+      if (humEl) humEl.innerHTML = `${d.humidity.toFixed(0)}<span class="tel-unit">%</span>`;
+      if (hrEl) hrEl.innerHTML = `${d.heartRate}<span class="tel-unit">bpm</span>`;
+      if (rrEl) rrEl.innerHTML = `${d.respiratoryRate}<span class="tel-unit">次/分</span>`;
+      if (laEl) laEl.textContent = timeAgo(d.lastActive);
+    }
+
+    // Update device list page
+    const dtEl = document.getElementById(`dev-temp-${d.id}`);
+    const dhEl = document.getElementById(`dev-hum-${d.id}`);
+    const dhrEl = document.getElementById(`dev-hr-${d.id}`);
+    if (dtEl) dtEl.textContent = `${d.temperature.toFixed(1)}°C`;
+    if (dhEl) dhEl.textContent = `${d.humidity.toFixed(0)}%`;
+    if (dhrEl) dhrEl.textContent = `${d.heartRate} bpm`;
+  });
+}
+
+function simulateAlert() {
+  if (Math.random() > 0.08) return; // 8% chance per tick
+  const device = pick(AppState.devices.filter(d => d.status !== 'offline'));
+  if (!device) return;
+  const at = pick(ALERT_TYPES.filter(t => t.severity !== 'critical' || Math.random() > 0.5));
+  const msgs = {
+    '体温异常': `检测到儿童体温偏高，当前体温${rand(37.6,38.5).toFixed(1)}°C`,
+    '心率异常': `检测到心率波动，当前心率${randInt(40,130)}次/分钟`,
+    '湿度超标': `环境湿度异常，当前湿度${rand(20,90).toFixed(0)}%`,
+    '温度异常': `房间温度偏离正常范围，当前温度${rand(16,34).toFixed(1)}°C`,
+    '尿床检测': `检测到床垫湿度升高，疑似尿床`,
+    '设备离线': `设备信号不稳定，可能存在离线风险`,
+    '睡眠不规律': `检测到儿童睡眠模式出现偏差`,
+    '固件更新': `设备固件新版本可供更新`,
+    '翻身频繁': `检测到儿童翻身频率增高`,
+    '呼吸异常': `检测到呼吸频率异常波动`,
+  };
+  const alert = {
+    id: `ALT-${String(AppState.alerts.length + 1).padStart(3,'0')}`,
+    type: at.type,
+    severity: at.severity,
+    deviceId: device.id,
+    deviceName: device.name,
+    message: msgs[at.type],
+    timestamp: new Date(),
+    acknowledged: false,
+    acknowledgedBy: null,
+    acknowledgedAt: null,
+  };
+  AppState.alerts.unshift(alert);
+  updateNotifBadge();
+  showToast(`新告警: ${alert.type}`, alert.message, alert.severity);
+
+  // Re-render current page if it's alerts or dashboard
+  const main = document.getElementById('app-main');
+  if (AppState.currentPage === 'alerts') renderAlerts(main);
+  if (AppState.currentPage === 'dashboard') renderDashboard(main);
+}
+
+function updateNotifBadge() {
+  const count = AppState.alerts.filter(a => !a.acknowledged).length;
+  const badge = document.getElementById('notif-count');
+  if (count > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = count > 99 ? '99+' : count;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ==================== 12. Event Handlers ====================
+function initEvents() {
+  // Hamburger
+  document.getElementById('hamburger-btn').addEventListener('click', () => {
+    AppState.sidebarOpen = !AppState.sidebarOpen;
+    document.getElementById('sidebar').classList.toggle('open', AppState.sidebarOpen);
+  });
+
+  // Close sidebar on nav (mobile)
+  document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.addEventListener('click', () => {
+      if (AppState.sidebarOpen) {
+        AppState.sidebarOpen = false;
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    });
+  });
+
+  // Notification bell
+  document.getElementById('notif-bell').addEventListener('click', () => {
+    location.hash = '#/alerts';
+  });
+
+  // Modal: click backdrop to close
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      if (AppState.sidebarOpen) {
+        AppState.sidebarOpen = false;
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+    if (e.key === '/' && document.activeElement === document.body) {
+      e.preventDefault();
+      const searchInput = document.querySelector('#app-main input[type="text"]');
+      if (searchInput) searchInput.focus();
+    }
+  });
+
+  // Close sidebar on main click (mobile)
+  document.getElementById('app-main').addEventListener('click', () => {
+    if (AppState.sidebarOpen && window.innerWidth <= 768) {
+      AppState.sidebarOpen = false;
+      document.getElementById('sidebar').classList.remove('open');
+    }
+  });
+}
+
+// ==================== 13. Initialization ====================
+function init() {
+  // Generate mock data
+  AppState.devices = generateDevices(20);
+  AppState.users = generateUsers(15);
+
+  // Link users to devices
+  AppState.users.forEach(u => {
+    const count = randInt(1, 3);
+    const shuffled = [...AppState.devices].sort(() => Math.random() - 0.5);
+    u.associatedDevices = shuffled.slice(0, count).map(d => d.id);
+  });
+
+  AppState.alerts = generateAlerts(30, AppState.devices);
+
+  // Set up event listeners
+  initEvents();
+
+  // Start routing
+  Router.init();
+
+  // Start clock
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Start live simulator
+  setInterval(liveUpdateTelemetry, 3000);
+  setInterval(simulateAlert, 8000);
+
+  // Update notification badge
+  updateNotifBadge();
+
+  console.log('🏥 智眠云管 - 智能儿童床云服务器管理平台 已就绪');
+  console.log(`  设备: ${AppState.devices.length} 台 | 用户: ${AppState.users.length} 人 | 告警: ${AppState.alerts.length} 条`);
+  console.log('  Hash路由: #/dashboard | #/devices | #/device/:id | #/users | #/alerts');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
