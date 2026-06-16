@@ -73,13 +73,14 @@ void app_main(void)
     ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
     ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
 
-    esp_err_t cls_err = classifyTflite_start();
-    if (cls_err != ESP_OK) {
-        ESP_LOGE(TAG, "classify_tflite start failed: %s", esp_err_to_name(cls_err));
-    }
+    // esp_err_t cls_err = classifyTflite_start();
+    // if (cls_err != ESP_OK) {
+    //     ESP_LOGE(TAG, "classify_tflite start failed: %s", esp_err_to_name(cls_err));
+    // }
 
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
+    micSample_start(i2c0_bus);
 
     // // uart1 使用体温传感器
     // uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
@@ -92,7 +93,7 @@ void app_main(void)
 
     
     
-    // micSample_start(i2c0_bus);
+    
 
 
 
