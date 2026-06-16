@@ -323,6 +323,9 @@ static void onCloudCommand(const char *topic, const char *payload)
         int i = 0;
         while (*p && *p != '"' && i < (int)sizeof(cmd) - 1) cmd[i++] = *p++;
     }
+    if (strcmp(cmd, "classify_audio") == 0) {
+        return;
+    }
 
     /* 统一提取 value（数值 / 字符串） */
     int  num_val = 0;

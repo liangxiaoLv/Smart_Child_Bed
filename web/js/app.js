@@ -298,6 +298,7 @@ function clearAuthErrors() {
 
 /* ─── 服务器配置 ──────────────────────────────────── */
 const WS_URL  = 'ws://60.205.235.150:9001';
+const AUDIO_SOURCE_BASE = 'http://60.205.235.150:8080/source/';
 
 /* ─── MQTT 话题 ──────────────────────────────────── */
 const TOPIC_STATUS    = 'bed/status';
@@ -469,6 +470,27 @@ function playAudio(filename) {
     addLog('audio', '请求播放: ' + filename);
 }
 
+function inferAudio(filename) {
+    var url = AUDIO_SOURCE_BASE + encodeURIComponent(filename);
+    sendCommand('classify_audio', url);
+    addLog('audio', '请求推理: ' + filename);
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeJsArg(s) {
+    return String(s)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'");
+}
+
 function handleAudioList(files) {
     var list = document.getElementById('audio-list');
     if (!files || files.length === 0) {
@@ -478,10 +500,15 @@ function handleAudioList(files) {
     var html = '';
     files.forEach(function(f) {
         var sizeKB = (f.size / 1024).toFixed(1);
+        var nameText = escapeHtml(f.name);
+        var nameArg = escapeJsArg(f.name);
         html += '<div class="audio-item">' +
-                '<span class="audio-name">' + f.name + '</span>' +
+                '<span class="audio-name">' + nameText + '</span>' +
                 '<span class="audio-size">' + sizeKB + ' KB</span>' +
-                '<button class="btn btn-play" onclick="playAudio(\'' + f.name + '\')">播放</button>' +
+                '<div class="audio-actions">' +
+                '<button class="btn btn-play" onclick="playAudio(\'' + nameArg + '\')">播放</button>' +
+                '<button class="btn btn-infer" onclick="inferAudio(\'' + nameArg + '\')">推理</button>' +
+                '</div>' +
                 '</div>';
     });
     list.innerHTML = html;

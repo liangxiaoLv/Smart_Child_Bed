@@ -4,6 +4,7 @@
 #include "sleep_monitor.h"
 #include "rgb_led.h"
 #include "rgb_screen_16_16_4.h"
+#include "classify_tflite_service.h"
 
 #include "red_temp.h"
 #include "i2c_driver.h"
@@ -11,6 +12,7 @@
 #include "uart_driver.h"
 
 #include "esp_log.h"
+#include "esp_err.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
@@ -70,6 +72,11 @@ void app_main(void)
     ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
     ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
     ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
+
+    esp_err_t cls_err = classifyTflite_start();
+    if (cls_err != ESP_OK) {
+        ESP_LOGE(TAG, "classify_tflite start failed: %s", esp_err_to_name(cls_err));
+    }
 
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();

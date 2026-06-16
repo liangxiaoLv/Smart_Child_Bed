@@ -23,7 +23,8 @@ static const char *TAG = "mqtt";
 
 /* ─── 模块状态 ────────────────────────────────────────────── */
 static esp_mqtt_client_handle_t s_client = NULL;
-static void (*s_cmd_cb)(const char *topic, const char *payload);
+#define CMD_CB_MAX 4
+static void (*s_cmd_cbs[CMD_CB_MAX])(const char *topic, const char *payload);
 static void (*s_audio_start_cb)(const char *name, size_t total_size);
 static void (*s_audio_chunk_cb)(const uint8_t *data, size_t len);
 
@@ -98,8 +99,12 @@ static void mqttEventHandler(void *arg, esp_event_base_t base,
                     if (p) fsize = (size_t)atol(p + 1);
                 }
                 s_audio_start_cb(name, fsize);
-            } else if (strcmp(topic, TOPIC_CONTROL) == 0 && s_cmd_cb) {
-                s_cmd_cb(topic, payload);
+            } else if (strcmp(topic, TOPIC_CONTROL) == 0) {
+                for (int i = 0; i < CMD_CB_MAX; i++) {
+                    if (s_cmd_cbs[i]) {
+                        s_cmd_cbs[i](topic, payload);
+                    }
+                }
             }
 
             free(payload);
@@ -191,7 +196,22 @@ esp_err_t mqttClient_publishBinary(const char *topic, const uint8_t *data, size_
 
 void mqttClient_onCommand(void (*cb)(const char *topic, const char *payload))
 {
-    s_cmd_cb = cb;
+    if (!cb) {
+        return;
+    }
+
+    for (int i = 0; i < CMD_CB_MAX; i++) {
+        if (s_cmd_cbs[i] == cb) {
+            return;
+        }
+    }
+    for (int i = 0; i < CMD_CB_MAX; i++) {
+        if (!s_cmd_cbs[i]) {
+            s_cmd_cbs[i] = cb;
+            return;
+        }
+    }
+    ESP_LOGW(TAG, "command callback slots full");
 }
 
 void mqttClient_onAudioStart(void (*cb)(const char *name, size_t total_size))

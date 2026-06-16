@@ -384,6 +384,12 @@ input[type="range"] {
     text-align: right;
 }
 
+.audio-actions {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
 .btn-play {
     flex: 0;
     padding: 6px 16px;
@@ -400,7 +406,24 @@ input[type="range"] {
     filter: brightness(1.15);
 }
 
-.btn-play:active {
+.btn-infer {
+    flex: 0;
+    padding: 6px 16px;
+    background: #238636;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: filter .15s;
+}
+
+.btn-infer:hover {
+    filter: brightness(1.12);
+}
+
+.btn-play:active,
+.btn-infer:active {
     transform: scale(0.97);
 }
 
