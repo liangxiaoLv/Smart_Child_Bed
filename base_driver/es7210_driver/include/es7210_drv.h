@@ -59,6 +59,17 @@ typedef void *es7210_drv_handle_t;
 #define  ES7210_MIC12_POWER_REG4B           0x4B        /* MIC偏置、ADC和PGA电源 */
 #define  ES7210_MIC34_POWER_REG4C           0x4C
 
+/* ═══════════════════════════════════════════════════════════════
+ * ES7210 寄存器地址
+ * ═══════════════════════════════════════════════════════════════ */
+#define ES7210_CHIP_ID_REG3F                0x3F
+#define ES7210_DMIC_FREQ_REG0E              0x0E
+#define ES7210_DMIC_CONFIG_REG10            0x10
+#define ES7210_ADC12_MUTE_REG15             0x15
+#define ES7210_REG0B                        0x0B
+#define ES7210_REG0D                        0x0D
+#define ES7210_REG0F                        0x0F
+
 typedef enum {
     ES7210_I2S_FMT_I2S   = 0x00,
     ES7210_I2S_FMT_LJ    = 0x01,
