@@ -82,6 +82,7 @@ esp_err_t mqttClient_start(void)
 
     esp_mqtt_client_config_t cfg = {
         .broker.address.uri = MQTT_BROKER_URI,
+        .credentials.client_id = client_id,
         .credentials.username = MQTT_USERNAME,
         .credentials.authentication.password = MQTT_PASSWORD,
         .session.keepalive = 30,

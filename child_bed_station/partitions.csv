@@ -1,4 +1,4 @@
-# ESP32-S3 分区表 — 16MB Flash (QIO)
+# ESP32-C3 分区表 — 16MB Flash (QIO)
 #
 # 地址空间布局：
 #   0x000000 - 0x008000  32KB   Bootloader (固定)

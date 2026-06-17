@@ -90,7 +90,7 @@
  * mmWave 毫米波雷达 — UART1
  * 注意：GPIO 4/5 与 I2C1、LCD 控制线复用
  * ═══════════════════════════════════════════════════════════════ */
-#define RADAR_UART_NUM      UART2_PORT_NUM              /* 雷达使用 UART1 */
+#define RADAR_UART_NUM      UART2_PORT_NUM          
 #define RADAR_RX_PIN        UART2_RX_PIN      /* 雷达 UART 接收 */
 #define RADAR_TX_PIN        UART2_TX_PIN      /* 雷达 UART 发送 */
 #define RADAR_BAUD_RATE     9600            /* 雷达串口波特率 */
@@ -100,9 +100,9 @@
  * BCG 睡眠监护仪 — 已停用（UART2 现归红外体温传感器）
  * 如需重新启用，需分配空闲 UART 或与其它设备共用
  * ═══════════════════════════════════════════════════════════════ */
-#define BCG_UART_NUM        2               /* 原使用 UART2，现已分配给 red_temp */
-#define BCG_RX_PIN          GPIO_NUM_5      /* ESP32 RX ← BCG_TX (IO5) */
-#define BCG_TX_PIN          GPIO_NUM_4      /* ESP32 TX → BCG_RX (IO4) */
+#define BCG_UART_NUM        UART2_PORT_NUM   
+#define BCG_RX_PIN          UART2_RX_PIN 
+#define BCG_TX_PIN          UART2_TX_PIN    
 #define BCG_BAUD_RATE       115200          /* BCG 串口波特率 */
 #define BCG_RX_BUF_SIZE     4096            /* BCG UART RX 缓冲区 (AD 采样帧最大 ~1025B) */
 
@@ -169,7 +169,7 @@
  * RGB 16×16×4 大屏 (4 块 16×16 横向拼接, 1024 LED)
  * 数据线 GPIO 5
  * ═══════════════════════════════════════════════════════════════ */
-#define RGB_SCREEN_16_16_4_DATA_PIN     GPIO_NUM_5
+#define RGB_SCREEN_16_16_4_DATA_PIN     GPIO_NUM_45
 #define RGB_SCREEN_16_16_4_LED_NUM      1024
 #define RGB_SCREEN_16_16_4_RMT_RES_HZ   10000000
 
@@ -177,7 +177,7 @@
  * 16×16×4 大屏 — 功能按键 (KEY0=绿, KEY1=黄, KEY2=红)
  * 按下低电平, 需上拉
  * ═══════════════════════════════════════════════════════════════ */
-#define RGB_SCREEN_KEY0_PIN     GPIO_NUM_10      /* 绿色 - 翻页 */
+#define RGB_SCREEN_KEY0_PIN     GPIO_NUM_0      /* 绿色 - 翻页 */
 #define RGB_SCREEN_KEY1_PIN     GPIO_NUM_47      /* 黄色 - 亮度+10% */
 #define RGB_SCREEN_KEY2_PIN     GPIO_NUM_45      /* 红色 - 亮度-10% */
 
@@ -185,9 +185,9 @@
  * 旋转编码器 — 正交脉冲 + 按键
  * V → 3.3V, G → GND
  * ═══════════════════════════════════════════════════════════════ */
-#define ROTARY_ENC_A_PIN     GPIO_NUM_17     /* A 相脉冲信号 */
-#define ROTARY_ENC_B_PIN     GPIO_NUM_16     /* B 相脉冲信号 */
-#define ROTARY_ENC_SW_PIN    GPIO_NUM_37      /* 按键信号（按下为低） */
+#define ROTARY_ENC_A_PIN     GPIO_NUM_39     /* A 相脉冲信号 */
+#define ROTARY_ENC_B_PIN     GPIO_NUM_38     /* B 相脉冲信号 */
+#define ROTARY_ENC_SW_PIN    GPIO_NUM_40      /* 按键信号（按下为低） */
 
 /* ═══════════════════════════════════════════════════════════════
  * ES7210 — 4 通道音频 ADC (挂载于 I2C0)
@@ -199,3 +199,9 @@
 #define ES7210_I2S_LRCK_PIN  GPIO_NUM_9     /* 左右声道时钟 */
 #define ES7210_I2S_DIN_PIN   GPIO_NUM_14    /* ADC 数据 (ES7210 SDOUT1 → ESP32 DIN) */
 #define ES7210_INT_PIN       GPIO_NUM_12    /* 中断输出 */
+
+/* ═══════════════════════════════════════════════════════════════
+ * 测试 LED — GPIO3
+ * 正极接 IO3，负极接地，高电平点亮
+ * ═══════════════════════════════════════════════════════════════ */
+#define TEST_LED_PIN         GPIO_NUM_3

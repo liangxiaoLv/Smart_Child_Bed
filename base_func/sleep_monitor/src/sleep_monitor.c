@@ -1,12 +1,14 @@
 #include "sleep_monitor.h"
 #include "pin_map.h"
 #include "uart_driver.h"
+#include "cloud_mqtt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 static const char *TAG = "sleep_monitor";
 
@@ -318,6 +320,11 @@ static void dispatchReport(const bcgFrame_t *f)
             ESP_LOGI(TAG, "[%lu][上报] channel=%u HR=%u RR=%u bed=%s",
                      esp_log_timestamp(), f->channel,
                      f->arg[1], f->arg[2], bedStateStr(f->arg[3]));
+            char buf[128];
+            snprintf(buf, sizeof(buf),
+                     "{\"hr\":%u,\"rr\":%u,\"bed\":%u}",
+                     f->arg[1], f->arg[2], f->arg[3]);
+            mqttClient_publish("bed/bcg", buf);
         }
         break;
 
@@ -330,6 +337,11 @@ static void dispatchReport(const bcgFrame_t *f)
                      sleepStateStr(f->arg[1]), f->arg[2], fatigueStr(f->arg[2]),
                      breathHoldStr(f->arg[3]), stress, stressStr(stress),
                      bedStateStr(f->arg[6]));
+            char buf[128];
+            snprintf(buf, sizeof(buf),
+                     "{\"sleep\":%u,\"fatigue\":%u,\"breath\":%u,\"stress\":%u,\"bed\":%u}",
+                     f->arg[1], f->arg[2], f->arg[3], stress, f->arg[6]);
+            mqttClient_publish("bed/bcg", buf);
         }
         break;
 

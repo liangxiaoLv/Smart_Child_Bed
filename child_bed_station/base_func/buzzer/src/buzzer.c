@@ -6,7 +6,7 @@
 
 static const char *TAG = "buzzer";
 
-#define BUZZER_PIN      GPIO_NUM_42
+#define BUZZER_PIN      GPIO_NUM_4
 
 /* 低电平触发: 0=响, 1=停 */
 #define BUZZER_ON       0

@@ -71,6 +71,7 @@ static uint16_t s_sr_move_cnt;
 
 /*------------红外体温传感器------------*/
 static float   s_body_temp = 0;
+static TickType_t s_fever_last_report = 0;  /* 上次发烧预警发布时刻 */
 
 static char    s_ssid[33] = "";
 
@@ -80,6 +81,12 @@ static char    s_ssid[33] = "";
 #define TOPIC_STATUS       "bed/status"
 #define TOPIC_HEARTBEAT    "bed/heartbeat"
 #define TOPIC_SLEEP_REPORT "bed/sleep_report"
+#define TOPIC_FEVER        "bed/fever"
+
+/* 发烧判断阈值 */
+#define FEVER_THRESHOLD_C  38.5f
+/* 发烧预警冷却时间（毫秒），冷却期内不重复上报 */
+#define FEVER_COOLDOWN_MS  90000
 
 /* ─── 数据上报任务 ─────────────────────────────────────────── */
 static void reportTask(void *arg)
@@ -178,6 +185,24 @@ void trans2cloud_updateSleepRecord(bool recording)
 void trans2cloud_updateBodyTemp(float temp_c)
 {
     s_body_temp = temp_c;
+
+    /* 体温超过阈值时立即上报发烧预警，冷却期内不重复上报 */
+    if (temp_c >= FEVER_THRESHOLD_C) {
+        TickType_t now = xTaskGetTickCount();
+        if (s_fever_last_report == 0 ||
+            (now - s_fever_last_report) >= pdMS_TO_TICKS(FEVER_COOLDOWN_MS)) {
+            char json[64];
+            snprintf(json, sizeof(json), "{\"body_temp\":%.1f}", temp_c);
+            mqttClient_publish(TOPIC_FEVER, json);
+            s_fever_last_report = now;
+            ESP_LOGW(TAG, "发烧预警：体温 %.1f°C，已上报 %s", temp_c, TOPIC_FEVER);
+        } else {
+            ESP_LOGI(TAG, "发烧冷却中：体温 %.1f°C，距下次可报 %lus",
+                     temp_c,
+                     (unsigned long)(pdMS_TO_TICKS(FEVER_COOLDOWN_MS) - (now - s_fever_last_report))
+                         / configTICK_RATE_HZ);
+        }
+    }
 }
 
 /*------------时间格式化------------*/

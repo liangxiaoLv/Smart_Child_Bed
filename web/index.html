@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能儿童床</title>
-    <link rel="stylesheet" href="css/style.css?v=20260616">
+    <link rel="stylesheet" href="css/style.css?v=20260615b">
 </head>
 <body>
     <header>
@@ -32,222 +32,117 @@
         </div>
     </header>
 
-    <!-- ── 认证覆盖层 ──────────────────────────── -->
     <div id="auth-overlay" class="auth-overlay">
-        <div class="auth-panel" id="auth-panel">
-            <!-- 登录表单 -->
+        <div class="auth-panel">
             <div id="auth-login" class="auth-form active">
                 <h2 class="auth-title">登录</h2>
-                <div class="form-group">
-                    <label>用户名</label>
-                    <input type="text" id="login-username" placeholder="请输入用户名" autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="login-password" placeholder="请输入密码" autocomplete="current-password">
-                </div>
+                <div class="form-group"><label>用户名</label><input type="text" id="login-username" placeholder="请输入用户名" autocomplete="username"></div>
+                <div class="form-group"><label>密码</label><input type="password" id="login-password" placeholder="请输入密码" autocomplete="current-password"></div>
                 <div id="login-error" class="auth-error"></div>
                 <button class="btn btn-auth-primary" onclick="login()">登 录</button>
-                <div class="auth-switch">
-                    没有账号？<a href="javascript:void(0)" onclick="showAuthPanel('register')">立即注册</a>
-                </div>
+                <div class="auth-switch">没有账号？<a href="javascript:void(0)" onclick="showAuthPanel('register')">立即注册</a></div>
             </div>
-
-            <!-- 注册表单 -->
             <div id="auth-register" class="auth-form">
                 <h2 class="auth-title">注册</h2>
-                <div class="form-group">
-                    <label>用户名</label>
-                    <input type="text" id="reg-username" placeholder="3-20位字母、数字、下划线或中文">
-                </div>
-                <div class="form-group">
-                    <label>邮箱</label>
-                    <input type="email" id="reg-email" placeholder="请输入邮箱（可选）">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="reg-password" placeholder="至少6位密码" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label>确认密码</label>
-                    <input type="password" id="reg-password2" placeholder="再次输入密码" autocomplete="new-password">
-                </div>
+                <div class="form-group"><label>用户名</label><input type="text" id="reg-username" placeholder="3-20位字母数字下划线或中文"></div>
+                <div class="form-group"><label>邮箱</label><input type="email" id="reg-email" placeholder="请输入邮箱（可选）"></div>
+                <div class="form-group"><label>密码</label><input type="password" id="reg-password" placeholder="至少6位密码" autocomplete="new-password"></div>
+                <div class="form-group"><label>确认密码</label><input type="password" id="reg-password2" placeholder="再次输入密码" autocomplete="new-password"></div>
                 <div id="reg-error" class="auth-error"></div>
                 <button class="btn btn-auth-primary" onclick="register()">注 册</button>
-                <div class="auth-switch">
-                    已有账号？<a href="javascript:void(0)" onclick="showAuthPanel('login')">立即登录</a>
-                </div>
+                <div class="auth-switch">已有账号？<a href="javascript:void(0)" onclick="showAuthPanel('login')">立即登录</a></div>
             </div>
-
-            <!-- 修改密码表单 -->
             <div id="auth-chpwd" class="auth-form">
                 <h2 class="auth-title">修改密码</h2>
-                <div class="form-group">
-                    <label>原密码</label>
-                    <input type="password" id="chpwd-old" placeholder="请输入原密码">
-                </div>
-                <div class="form-group">
-                    <label>新密码</label>
-                    <input type="password" id="chpwd-new" placeholder="至少6位新密码">
-                </div>
-                <div class="form-group">
-                    <label>确认新密码</label>
-                    <input type="password" id="chpwd-new2" placeholder="再次输入新密码">
-                </div>
+                <div class="form-group"><label>原密码</label><input type="password" id="chpwd-old" placeholder="请输入原密码"></div>
+                <div class="form-group"><label>新密码</label><input type="password" id="chpwd-new" placeholder="至少6位新密码"></div>
+                <div class="form-group"><label>确认新密码</label><input type="password" id="chpwd-new2" placeholder="再次输入新密码"></div>
                 <div id="chpwd-error" class="auth-error"></div>
                 <button class="btn btn-auth-primary" onclick="changePassword()">确认修改</button>
-                <div class="auth-switch">
-                    <a href="javascript:void(0)" onclick="hideChangePassword()">返回</a>
-                </div>
+                <div class="auth-switch"><a href="javascript:void(0)" onclick="hideChangePassword()">返回</a></div>
             </div>
         </div>
     </div>
 
     <main>
-        <!-- ── 环境监测 ──────────────────────── -->
         <section class="panel sensor-panel">
-            <h2><span class="icon">&#8996;</span> 环境监测</h2>
+            <h2><span class="panel-icon">&#9728;</span> 环境监测</h2>
             <div class="sensor-grid">
-                <div class="card">
-                    <div class="card-icon temp">&#9730;</div>
-                    <div class="card-info">
-                        <span class="card-label">环境温度</span>
-                        <span class="card-value" id="val-env-temp">-- °C</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon hum">&#9727;</div>
-                    <div class="card-info">
-                        <span class="card-label">环境湿度</span>
-                        <span class="card-value" id="val-env-hum">-- %</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon body-temp">&#9730;</div>
-                    <div class="card-info">
-                        <span class="card-label">孩子体表温度</span>
-                        <span class="card-value" id="val-body-temp">-- °C</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon aqi">&#9925;</div>
-                    <div class="card-info">
-                        <span class="card-label">空气质量</span>
-                        <span class="card-value" id="val-aqi">--</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon">&#9832;</div>
-                    <div class="card-info">
-                        <span class="card-label">TVOC</span>
-                        <span class="card-value" id="val-tvoc">-- ppb</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon eco2">&#9729;</div>
-                    <div class="card-info">
-                        <span class="card-label">eCO₂</span>
-                        <span class="card-value" id="val-eco2">-- ppm</span>
-                    </div>
-                </div>
+                <div class="card"><div class="card-icon temp">&#9830;</div><div class="card-info"><span class="card-label">环境温度</span><span class="card-value" id="val-env-temp">--</span><span class="card-unit">°C</span></div></div>
+                <div class="card"><div class="card-icon hum">&#9730;</div><div class="card-info"><span class="card-label">环境湿度</span><span class="card-value" id="val-env-hum">--</span><span class="card-unit">%</span></div></div>
+                <div class="card"><div class="card-icon body-temp">&#9829;</div><div class="card-info"><span class="card-label">体表温度</span><span class="card-value" id="val-body-temp">--</span><span class="card-unit">°C</span></div></div>
+                <div class="card"><div class="card-icon aqi">&#9680;</div><div class="card-info"><span class="card-label">空气质量</span><span class="card-value" id="val-aqi">--</span><span class="card-unit"></span></div></div>
+                <div class="card"><div class="card-icon tvoc">&#9881;</div><div class="card-info"><span class="card-label">TVOC</span><span class="card-value" id="val-tvoc">--</span><span class="card-unit">ppb</span></div></div>
+                <div class="card"><div class="card-icon eco2">&#9729;</div><div class="card-info"><span class="card-label">eCO₂</span><span class="card-value" id="val-eco2">--</span><span class="card-unit">ppm</span></div></div>
             </div>
         </section>
 
-        <!-- ── 睡眠体征监测 ──────────────────────── -->
         <section class="panel bcg-panel">
-            <h2><span class="icon">&#9829;</span> 睡眠体征监测</h2>
+            <h2><span class="panel-icon bcg-icon">&#9829;</span> BCG 体征</h2>
             <div class="sensor-grid">
-                <div class="card">
-                    <div class="card-icon presence">&#9788;</div>
-                    <div class="card-info">
-                        <span class="card-label">在床检测</span>
-                        <span class="card-value" id="val-bcg-person">--</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon breath">&#9832;</div>
-                    <div class="card-info">
-                        <span class="card-label">呼吸率</span>
-                        <span class="card-value" id="val-bcg-breath">-- 次/分</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon heart">&#9829;</div>
-                    <div class="card-info">
-                        <span class="card-label">心率</span>
-                        <span class="card-value" id="val-bcg-heart">-- bpm</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-icon move">&#9872;</div>
-                    <div class="card-info">
-                        <span class="card-label">体动状态</span>
-                        <span class="card-value" id="val-bcg-move">--</span>
-                    </div>
-                </div>
+                <div class="card card-hi"><div class="card-icon heart">&#9829;</div><div class="card-info"><span class="card-label">心率 HR</span><span class="card-value" id="val-bcg-hr">--</span><span class="card-unit">bpm</span></div></div>
+                <div class="card card-hi"><div class="card-icon breath">&#8734;</div><div class="card-info"><span class="card-label">呼吸率 RR</span><span class="card-value" id="val-bcg-rr">--</span><span class="card-unit">次/分</span></div></div>
+                <div class="card"><div class="card-icon sleep-st">&#9790;</div><div class="card-info"><span class="card-label">睡眠状态</span><span class="card-value text-val" id="val-bcg-sleep">--</span></div></div>
+                <div class="card"><div class="card-icon fatigue">&#9711;</div><div class="card-info"><span class="card-label">疲劳指数</span><span class="card-value text-val" id="val-bcg-fatigue">--</span></div></div>
+                <div class="card"><div class="card-icon apnea">&#9656;</div><div class="card-info"><span class="card-label">憋气状态</span><span class="card-value text-val" id="val-bcg-breath-hold">--</span></div></div>
+                <div class="card"><div class="card-icon stress">&#9670;</div><div class="card-info"><span class="card-label">压力指数</span><span class="card-value text-val" id="val-bcg-stress">--</span></div></div>
             </div>
-            <div class="sleep-record-section" style="display:none">
-                <div id="sleep-record-indicator" class="sleep-indicator idle">
-                    &#9679; 未在记录
-                </div>
-                <div class="ctrl-row" style="margin-top:12px;">
-                    <button class="btn btn-sleep-start" id="btn-sleep-start" onclick="startSleepRecord()">开始睡眠记录</button>
-                    <button class="btn btn-sleep-stop" id="btn-sleep-stop" onclick="stopSleepRecord()" disabled>停止睡眠记录</button>
-                </div>
-                <div class="ctrl-row" style="margin-top:8px;">
-                    <button class="btn btn-report" id="btn-sleep-report" onclick="querySleepReport()">查看睡眠报告</button>
-                </div>
+            <div class="update-bar">
+                <span class="update-label">最后更新</span>
+                <span id="val-bcg-time" class="update-time">--</span>
             </div>
-            <div id="sleep-report-area" class="sleep-report-area" style="display:none"></div>
         </section>
 
-        <!-- ── 设备控制 ──────────────────────── -->
         <section class="panel ctrl-panel">
-            <h2><span class="icon">&#9788;</span> 设备控制</h2>
-            <div class="ctrl-row">
-                <button class="btn btn-on" id="btn-led-on">开灯</button>
-                <button class="btn btn-off" id="btn-led-off">关灯</button>
+            <h2><span class="panel-icon">&#9881;</span> 设备控制</h2>
+            <div class="ctrl-group">
+                <div class="ctrl-group-label">灯光</div>
+                <div class="ctrl-row">
+                    <button class="btn btn-on" id="btn-led-on">开灯</button>
+                    <button class="btn btn-off" id="btn-led-off">关灯</button>
+                </div>
+                <div class="ctrl-row">
+                    <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
+                    <button class="btn btn-mode" data-mode="breath">呼吸</button>
+                    <button class="btn btn-mode" data-mode="solid">常亮</button>
+                </div>
+                <div class="slider-row">
+                    <span class="ctrl-label">亮度</span>
+                    <input type="range" id="slider-brightness" min="10" max="100" value="80">
+                    <span id="val-brightness" class="slider-val">80%</span>
+                </div>
             </div>
-            <div class="ctrl-row">
+            <div class="ctrl-group">
+                <div class="ctrl-group-label">音频</div>
+                <div class="slider-row">
+                    <span class="ctrl-label">音量</span>
+                    <input type="range" id="slider-volume" min="0" max="100" value="80">
+                    <span id="val-volume" class="slider-val">80%</span>
+                </div>
+            </div>
+            <div class="ctrl-group">
                 <button class="btn btn-warning-off" id="btn-warning-off">关闭基站提示</button>
-            </div>
-            <div class="ctrl-row">
-                <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
-                <button class="btn btn-mode" data-mode="breath">呼吸</button>
-                <button class="btn btn-mode" data-mode="solid">常亮</button>
-            </div>
-            <div class="brightness-ctrl">
-                <span class="ctrl-label">亮度</span>
-                <input type="range" id="slider-brightness" min="10" max="100" value="80">
-                <span id="val-brightness" class="brightness-val">80%</span>
-            </div>
-            <div class="brightness-ctrl" style="margin-top:12px;">
-                <span class="ctrl-label">音量</span>
-                <input type="range" id="slider-volume" min="0" max="100" value="80">
-                <span id="val-volume" class="brightness-val">80%</span>
             </div>
         </section>
     </main>
 
+    <section class="panel audio-panel">
+        <div class="section-header">
+            <h2><span class="panel-icon">&#9835;</span> 音频播放</h2>
+            <button class="btn-sm" id="btn-refresh-audio">刷新</button>
+        </div>
+        <div id="audio-list"><div class="empty-hint">点击刷新获取音频列表</div></div>
+    </section>
+
     <section class="log-panel">
-        <div class="log-header">
+        <div class="section-header">
             <h3>消息日志</h3>
-            <button class="btn-clear" id="btn-clear-log">清空</button>
+            <button class="btn-sm" id="btn-clear-log">清空</button>
         </div>
         <div id="log-list"></div>
     </section>
 
-    <section class="panel audio-panel">
-        <div class="audio-header">
-            <h2>&#9835; 音频播放</h2>
-            <button class="btn-clear" id="btn-refresh-audio">刷新</button>
-        </div>
-        <div id="audio-list">
-            <div class="audio-empty">点击刷新获取音频列表</div>
-        </div>
-    </section>
-
     <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
-    <script src="js/app.js?v=20260616"></script>
+    <script src="js/app.js?v=20260615b"></script>
 </body>
 </html>

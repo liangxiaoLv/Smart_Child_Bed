@@ -55,7 +55,7 @@ esp_err_t rgbScreen16x16x4_init(void)
     }
     ws2812Driver_off(s_ws);
     ESP_LOGI(TAG, "16x16x4 点阵屏初始化完成");
-    return rgbScreen16x16x4_reset();
+    return ESP_OK;
 }
 
 esp_err_t rgbScreen16x16x4_clear(void)
@@ -248,6 +248,91 @@ static void btnTask(void *arg)
             }
         }
     }
+}
+
+/* ─── 时间显示 ────────────────────────────────────────────── */
+
+/* 5×7 数字点阵 (0~9)，每字符 7 行×5 列，bit=1 点亮 */
+static const uint8_t FONT_5x7[10][7] = {
+    {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E}, /* 0 */
+    {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E}, /* 1 */
+    {0x0E,0x11,0x01,0x02,0x04,0x08,0x1F}, /* 2 */
+    {0x0E,0x11,0x01,0x06,0x01,0x11,0x0E}, /* 3 */
+    {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02}, /* 4 */
+    {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E}, /* 5 */
+    {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E}, /* 6 */
+    {0x1F,0x01,0x02,0x04,0x08,0x08,0x08}, /* 7 */
+    {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E}, /* 8 */
+    {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C}, /* 9 */
+};
+
+/* 在 (x0, y0) 处绘制一个 5×7 数字，0-bit 写黑覆盖旧像素 */
+static void drawDigit(int digit, uint8_t x0, uint8_t y0,
+                      uint8_t r, uint8_t g, uint8_t b)
+{
+    for (uint8_t row = 0; row < 7; row++) {
+        uint8_t bits = FONT_5x7[digit][row];
+        for (uint8_t col = 0; col < 5; col++) {
+            if (bits & (0x10 >> col)) {
+                rgbScreen16x16x4_setPixel(x0 + col, y0 + row, r, g, b);
+            } else {
+                rgbScreen16x16x4_setPixel(x0 + col, y0 + row, 0, 0, 0);
+            }
+        }
+    }
+}
+
+/* 在 (x0, y0) 处绘制冒号 ":" (1×7，两个点位于 row2/row4)，其余行写黑 */
+static void drawColon(uint8_t x0, uint8_t y0,
+                      uint8_t r, uint8_t g, uint8_t b)
+{
+    for (uint8_t row = 0; row < 7; row++) {
+        if (row == 2 || row == 4) {
+            rgbScreen16x16x4_setPixel(x0, y0 + row, r, g, b);
+        } else {
+            rgbScreen16x16x4_setPixel(x0, y0 + row, 0, 0, 0);
+        }
+    }
+}
+
+/*
+ * 布局 (64×16 屏)：
+ *   HH : MM : SS
+ *   每个数字 5 宽，字间距 1，冒号 1 宽，冒号前后各 1 间距
+ *   总宽 = 5+1+5 + 1+1+1 + 5+1+5 + 1+1+1 + 5+1+5 = 45 → (64-45)/2 = 9 起始
+ *   实际序列: d0(5) gap(1) d1(5) sp(1) colon(1) sp(1) d2(5) gap(1) d3(5) sp(1) colon(1) sp(1) d4(5) gap(1) d5(5)
+ *   宽度:      5    1     5    1    1    1     5    1    5    1    1    1     5    1     5  = 45
+ *   纵向：y0 = (16-7)/2 = 4
+ */
+esp_err_t rgbScreen16x16x4_showTime(int hour, int min, int sec, bool colon_on)
+{
+    if (!s_ws) return ESP_ERR_INVALID_STATE;
+
+    const uint8_t y0 = 4;   /* (16-7)/2 */
+    const uint8_t x0 = 9;   /* (64-45)/2 */
+    const uint8_t R = 255, G = 255, B = 255;
+    const uint8_t CR = colon_on ? 255 : 0;
+    const uint8_t CG = colon_on ? 255 : 0;
+    const uint8_t CB = colon_on ? 255 : 0;
+
+    int digits[6] = {
+        hour / 10, hour % 10,
+        min  / 10, min  % 10,
+        sec  / 10, sec  % 10,
+    };
+
+    /* x 偏移表：d0 d1 ':' d2 d3 ':' d4 d5 */
+    uint8_t x = x0;
+    drawDigit(digits[0], x, y0, R, G, B); x += 6;  /* 5+1 */
+    drawDigit(digits[1], x, y0, R, G, B); x += 6;  /* 5+1 */
+    drawColon(x, y0, CR, CG, CB);          x += 3;  /* 1+2 */
+    drawDigit(digits[2], x, y0, R, G, B); x += 6;
+    drawDigit(digits[3], x, y0, R, G, B); x += 6;
+    drawColon(x, y0, CR, CG, CB);          x += 3;
+    drawDigit(digits[4], x, y0, R, G, B); x += 6;
+    drawDigit(digits[5], x, y0, R, G, B);
+
+    return rgbScreen16x16x4_flush();
 }
 
 esp_err_t rgbScreen16x16x4_initButtons(void)

@@ -54,3 +54,9 @@ esp_err_t rgbScreen16x16x4_brightnessDown(void);
 
 /* 初始化按键中断 (KEY0=绿=翻页, KEY1=黄=亮, KEY2=红=暗) */
 esp_err_t rgbScreen16x16x4_initButtons(void);
+
+/*
+ * 在全屏居中显示 HH:MM:SS，5×7 点阵字体，白色最大亮度
+ * colon_on=false 时冒号熄灭（用于 1Hz 闪烁）
+ */
+esp_err_t rgbScreen16x16x4_showTime(int hour, int min, int sec, bool colon_on);
