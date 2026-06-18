@@ -132,3 +132,35 @@ esp_err_t i2sDriver_deinit(i2sDriver_handle_t handle)
     ESP_LOGI(TAG, "I2S deinit");
     return ESP_OK;
 }
+
+esp_err_t i2sDriver_reconfigClock(i2sDriver_handle_t handle, uint32_t sample_rate,
+                                   uint8_t bits_per_sample, bool stereo)
+{
+    if (!handle) return ESP_ERR_INVALID_ARG;
+
+    i2s_std_clk_config_t clk_cfg = {
+        .sample_rate_hz = sample_rate,
+        .clk_src        = I2S_CLK_SRC_DEFAULT,
+        .mclk_multiple  = 256,
+    };
+    i2s_std_slot_config_t slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
+        bits_per_sample,
+        stereo ? I2S_SLOT_MODE_STEREO : I2S_SLOT_MODE_MONO);
+
+    esp_err_t ret = ESP_OK;
+    if (handle->tx_chan) {
+        i2s_channel_disable(handle->tx_chan);
+        ret = i2s_channel_reconfig_std_clock(handle->tx_chan, &clk_cfg);
+        if (ret == ESP_OK) {
+            ret = i2s_channel_reconfig_std_slot(handle->tx_chan, &slot_cfg);
+        }
+        i2s_channel_enable(handle->tx_chan);
+    }
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "reconfig clock failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "I2S reconfig: %luHz %dbit %s",
+                 sample_rate, bits_per_sample, stereo ? "stereo" : "mono");
+    }
+    return ret;
+}

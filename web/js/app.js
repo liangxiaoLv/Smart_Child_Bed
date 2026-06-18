@@ -185,8 +185,6 @@ const $dot      = document.getElementById('online-dot');
 const $wifiLabel= document.getElementById('wifi-label');
 const $logList  = document.getElementById('log-list');
 const $clock    = document.getElementById('clock');
-const $modeBtns = document.querySelectorAll('.btn-mode');
-
 /* ─── WebSocket ──────────────────────────────────────── */
 let ws = null;
 let heartbeatTimer = null;
@@ -353,27 +351,7 @@ function addLog(topic, msg) {
 }
 
 /* ─── 按钮绑定 ───────────────────────────────────────── */
-document.getElementById('btn-led-on').onclick      = function() { sendCommand('led_onoff', 1); };
-document.getElementById('btn-led-off').onclick     = function() { sendCommand('led_onoff', 0); };
-document.getElementById('btn-warning-off').onclick = function() { sendCommand('warning', 0); };
-
-$modeBtns.forEach(function(btn) {
-    btn.onclick = function() {
-        $modeBtns.forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        sendCommand('led_mode', btn.dataset.mode);
-    };
-});
-
-var sliderBr = document.getElementById('slider-brightness');
-sliderBr.oninput  = function() { document.getElementById('val-brightness').textContent = sliderBr.value + '%'; };
-sliderBr.onchange = function() { sendCommand('led_brightness', parseInt(sliderBr.value)); };
-
-var sliderVol = document.getElementById('slider-volume');
-sliderVol.oninput  = function() { document.getElementById('val-volume').textContent = sliderVol.value + '%'; };
-sliderVol.onchange = function() { sendCommand('volume', parseInt(sliderVol.value)); };
-
-document.getElementById('btn-clear-log').onclick     = function() { $logList.innerHTML = ''; };
+document.getElementById('btn-clear-log').onclick = function() { $logList.innerHTML = ''; };
 document.getElementById('btn-refresh-audio').onclick = function() { requestAudioList(); addLog('audio', '刷新列表'); };
 
 /* ─── 启动 ───────────────────────────────────────────── */

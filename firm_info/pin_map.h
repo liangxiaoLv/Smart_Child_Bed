@@ -139,21 +139,34 @@
 #define AP3216C_I2C_ADDR    0x1E            /* AP3216C 7-bit I2C 设备地址 */
 
 /* ═══════════════════════════════════════════════════════════════
- * I2S — 音频
- * 复用 LCD 数据线
+ * I2S0 — 预留（原 ES8388，驱动保留但不使用）
  * ═══════════════════════════════════════════════════════════════ */
-#define I2S_MCLK_PIN        GPIO_NUM_3      /* I2S 主时钟，与 LCD_G5 复用 */
-#define I2S_BCLK_PIN        GPIO_NUM_46     /* I2S 位时钟 (SCK)，与 LCD_G4 复用 */
-#define I2S_WS_PIN          GPIO_NUM_9      /* I2S 字选 (LRCK)，与 LCD_G3 复用 */
-#define I2S_DOUT_PIN        GPIO_NUM_10     /* I2S 数据输出 (接 ES8388 SDIN)，与 LCD_G2 复用 */
-#define I2S_DIN_PIN         GPIO_NUM_14     /* I2S 数据输入 (接 ES8388 SDOUT)，与 LCD_R7 复用 */
-#define I2S_PORT_NUM        0               /* I2S 端口号 */
+#define I2S_MCLK_PIN        GPIO_NUM_3
+#define I2S_BCLK_PIN        GPIO_NUM_46
+#define I2S_WS_PIN          GPIO_NUM_9
+#define I2S_DOUT_PIN        GPIO_NUM_10
+#define I2S_DIN_PIN         GPIO_NUM_14
+#define I2S_PORT_NUM        0
+
+/* ═══════════════════════════════════════════════════════════════
+ * I2S1 — AW88399QNR 音频功放
+ * ═══════════════════════════════════════════════════════════════ */
+#define I2S1_BCK_PIN        GPIO_NUM_4      /* I2S1 位时钟 */
+#define I2S1_LRCK_PIN       GPIO_NUM_5      /* I2S1 字选 (LRCK) */
+#define I2S1_DIN_PIN        GPIO_NUM_6      /* I2S1 数据输入（AW88399 → ESP32，备用） */
+#define I2S1_DOUT_PIN       GPIO_NUM_7      /* I2S1 数据输出（ESP32 → AW88399 SDIN） */
+#define I2S1_PORT_NUM       1
+
+/* ═══════════════════════════════════════════════════════════════
+ * AW88399QNR — 音频功放（挂载于 I2C0）
+ * ═══════════════════════════════════════════════════════════════ */
+#define AW88399QNR_I2C_ADDR 0x40            /* 7-bit I2C 地址 */
 
 /* ═══════════════════════════════════════════════════════════════
  * WS2812 RGB 灯带 — RMT
  * 数据线 GPIO 45
  * ═══════════════════════════════════════════════════════════════ */
-#define RGB_LED_DATA_PIN     GPIO_NUM_38      /* WS2812 数据线 */
+#define RGB_LED_DATA_PIN     GPIO_NUM_13      /* WS2812 数据线 */
 #define RGB_LED_NUM      15              /* 灯带 LED 数量 */
 #define RGB_LED_RMT_RES_HZ   10000000        /* RMT 分辨率 10MHz */
 
@@ -200,8 +213,3 @@
 #define ES7210_I2S_DIN_PIN   GPIO_NUM_14    /* ADC 数据 (ES7210 SDOUT1 → ESP32 DIN) */
 #define ES7210_INT_PIN       GPIO_NUM_12    /* 中断输出 */
 
-/* ═══════════════════════════════════════════════════════════════
- * 测试 LED — GPIO3
- * 正极接 IO3，负极接地，高电平点亮
- * ═══════════════════════════════════════════════════════════════ */
-#define TEST_LED_PIN         GPIO_NUM_3

@@ -10,12 +10,13 @@
 static const char *TAG = "rotary_enc";
 
 #define POLL_INTERVAL_US      500
-#define PRINT_INTERVAL_MS     500
 #define DEBOUNCE_TICKS          3
 
-static int32_t  s_encoderNum = 0;
+static volatile int32_t  s_encoderNum = 0;
+static volatile int32_t  s_encoderDelta = 0;
+static volatile bool     s_button_edge = false;
 static int      s_prevA;
-static bool     s_button_pressed = false;
+static bool     s_button_raw;
 
 static void pollTimerCB(void *arg)
 {
@@ -35,9 +36,9 @@ static void rotaryEncoderTask(void *arg)
 {
     bool prevButton = true;
     int  btnStable = 0;
-    TickType_t lastPrint = xTaskGetTickCount();
 
     for (;;) {
+        /* ── 按键消抖 ── */
         bool raw = (gpio_get_level(ROTARY_ENC_SW_PIN) == 0);
         if (raw == prevButton) {
             btnStable = 0;
@@ -46,19 +47,36 @@ static void rotaryEncoderTask(void *arg)
             if (btnStable >= DEBOUNCE_TICKS) {
                 prevButton = raw;
                 btnStable = 0;
-                s_button_pressed = raw;
-                ESP_LOGI(TAG, "按键: %s", raw ? "按下" : "释放");
+                s_button_raw = raw;
+                s_button_edge = true;
             }
         }
 
-        if ((xTaskGetTickCount() - lastPrint) >= pdMS_TO_TICKS(PRINT_INTERVAL_MS)) {
-            lastPrint = xTaskGetTickCount();
-            ESP_LOGI(TAG, "编码器=%ld  按键=%s",
-                     s_encoderNum / 2, s_button_pressed ? "按下" : "释放");
+        /* ── 累计 delta ── */
+        int32_t n = s_encoderNum;
+        if (n != 0) {
+            s_encoderNum = 0;
+            s_encoderDelta += n;
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+}
+
+/* ─── 公开 API ────────────────────────────────────────────── */
+
+int32_t rotaryEncoder_getDelta(void)
+{
+    int32_t d = s_encoderDelta;
+    s_encoderDelta = 0;
+    return d;
+}
+
+bool rotaryEncoder_buttonEdge(void)
+{
+    bool e = s_button_edge;
+    s_button_edge = false;
+    return e;
 }
 
 esp_err_t ROTARY_ENCODER_GET(void)

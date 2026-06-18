@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能儿童床</title>
-    <link rel="stylesheet" href="css/style.css?v=20260615b">
+    <link rel="stylesheet" href="css/style.css?v=20260618c">
 </head>
 <body>
     <header>
@@ -93,37 +93,6 @@
             </div>
         </section>
 
-        <section class="panel ctrl-panel">
-            <h2><span class="panel-icon">&#9881;</span> 设备控制</h2>
-            <div class="ctrl-group">
-                <div class="ctrl-group-label">灯光</div>
-                <div class="ctrl-row">
-                    <button class="btn btn-on" id="btn-led-on">开灯</button>
-                    <button class="btn btn-off" id="btn-led-off">关灯</button>
-                </div>
-                <div class="ctrl-row">
-                    <button class="btn btn-mode active" data-mode="rainbow">彩虹</button>
-                    <button class="btn btn-mode" data-mode="breath">呼吸</button>
-                    <button class="btn btn-mode" data-mode="solid">常亮</button>
-                </div>
-                <div class="slider-row">
-                    <span class="ctrl-label">亮度</span>
-                    <input type="range" id="slider-brightness" min="10" max="100" value="80">
-                    <span id="val-brightness" class="slider-val">80%</span>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <div class="ctrl-group-label">音频</div>
-                <div class="slider-row">
-                    <span class="ctrl-label">音量</span>
-                    <input type="range" id="slider-volume" min="0" max="100" value="80">
-                    <span id="val-volume" class="slider-val">80%</span>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <button class="btn btn-warning-off" id="btn-warning-off">关闭基站提示</button>
-            </div>
-        </section>
     </main>
 
     <section class="panel audio-panel">
@@ -143,6 +112,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
-    <script src="js/app.js?v=20260615b"></script>
+    <script src="js/app.js?v=20260618c"></script>
 </body>
 </html>

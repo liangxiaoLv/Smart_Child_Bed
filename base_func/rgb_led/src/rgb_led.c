@@ -1,165 +1,151 @@
+/**
+ * RGB 灯带 + 旋转编码器控制（WS2812, IO13）
+ * ==========================================
+ * 旋转编码器按键 → 开/关
+ * 旋转编码器旋钮 → 亮度 +/-5（范围 0~255）
+ * 上电默认关。打开时初始亮度 128。
+ */
 #include "rgb_led.h"
 #include "pin_map.h"
 #include "ws2812_driver.h"
-#include "xl9555_driver.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_timer.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
-#include <math.h>
 #include <string.h>
-
-#define DEBOUNCE_MS         30
-#define BREATH_PERIOD_MS    3000
-#define CYCLE_PERIOD_MS     4000
-#define TASK_TICK_MS        20
-#define BREATH_MIN           0.05f
 
 static const char *TAG = "rgb_led";
 
-typedef enum {
-    RGB_OFF,
-    RGB_SOLID,
-    RGB_BREATHING,
-    RGB_CYCLE,
-} rgbState_t;
+/* ─── 旋转编码器：硬件参数 ───────────────────────────────── */
+#define ENC_POLL_US        500
+#define BTN_DEBOUNCE_TICKS   3   /* × task tick(20ms) = 60ms */
 
-static rgbState_t s_state = RGB_OFF;
-static float s_brightness = 1.0f;
+/* ─── 灯带参数 ───────────────────────────────────────────── */
+#define TASK_TICK_MS        20
+#define BRIGHTNESS_STEP      5
+#define BRIGHTNESS_DEFAULT 128
+#define BRIGHTNESS_MAX     255
+
+/* ─── 全局状态 ───────────────────────────────────────────── */
 static ws2812_handle_t s_ws = NULL;
+static bool      s_on         = false;
+static int       s_brightness = BRIGHTNESS_DEFAULT;
 
-static bool keyEdge(xl9555_port_t port, uint8_t mask)
+/* 旋转编码器：A/B 相由定时器中断更新 */
+static volatile int32_t s_enc_raw = 0;
+static int      s_prev_a;
+
+/* ─── 定时器回调：A/B 相轮询（500us 高精度） ─────────────── */
+static void encPollCB(void *arg)
 {
-    static int cnt[2];
-    static bool db[2];
-    int idx = (mask == XL9555_KEY1) ? 0 : 1;
-
-    int thresh = DEBOUNCE_MS / TASK_TICK_MS;
-    bool raw = !xl9555Driver_getPin(port, mask);
-
-    if (raw) {
-        if (cnt[idx] < 255) cnt[idx]++;
-    } else {
-        cnt[idx] = 0;
+    (void)arg;
+    int a = gpio_get_level(ROTARY_ENC_A_PIN);
+    if (a != s_prev_a) {
+        int b = gpio_get_level(ROTARY_ENC_B_PIN);
+        if (b != s_prev_a) s_enc_raw++;
+        else                s_enc_raw--;
     }
-    bool stable = (cnt[idx] >= thresh);
-    bool edge = stable && !db[idx];
-    db[idx] = stable;
-    return edge;
+    s_prev_a = a;
 }
 
-static void fillColor(uint8_t r, uint8_t g, uint8_t b)
+/* ─── 输出 ──────────────────────────────────────────────── */
+static void showColor(void)
 {
-    uint8_t _r = (uint8_t)((float)r * s_brightness);
-    uint8_t _g = (uint8_t)((float)g * s_brightness);
-    uint8_t _b = (uint8_t)((float)b * s_brightness);
-    ws2812Driver_setAll(s_ws, _r, _g, _b);
-    ws2812Driver_flush(s_ws);
+    if (!s_ws) return;
+    if (s_on) {
+        uint8_t v = (uint8_t)s_brightness;
+        ws2812Driver_setAll(s_ws, v, v, v);
+        ws2812Driver_flush(s_ws);
+    } else {
+        ws2812Driver_off(s_ws);
+    }
 }
 
-static void hsvToRgb(float h, float s, float v, float *r, float *g, float *b)
-{
-    float c = v * s;
-    float hp = h / 60.0f;
-    float x = c * (1.0f - fabsf(fmodf(hp, 2.0f) - 1.0f));
-    if (hp < 1)      { *r = c; *g = x; *b = 0; }
-    else if (hp < 2) { *r = x; *g = c; *b = 0; }
-    else if (hp < 3) { *r = 0; *g = c; *b = x; }
-    else if (hp < 4) { *r = 0; *g = x; *b = c; }
-    else if (hp < 5) { *r = x; *g = 0; *b = c; }
-    else             { *r = c; *g = 0; *b = x; }
-    float m = v - c;
-    *r += m; *g += m; *b += m;
-}
-
+/* ─── 主控任务：按键消抖 + 旋钮读数 + 灯带刷新 ──────────── */
 static void rgbLedTask(void *arg)
 {
+    (void)arg;
     TickType_t lastWake = xTaskGetTickCount();
 
+    int32_t  enc_last  = 0;
+    int      btn_cnt   = 0;
+    bool     btn_stable = true;      /* 上拉，未按下 = true */
+    bool     btn_prev   = true;
+
+    /* 上电默认关 */
+    showColor();
+
     for (;;) {
-        bool k1 = keyEdge(XL9555_PORT1, XL9555_KEY1);
-        bool k2 = keyEdge(XL9555_PORT1, XL9555_KEY2);
+        /* ── 按键消抖 ── */
+        bool raw = (gpio_get_level(ROTARY_ENC_SW_PIN) == 0); /* 按下=低 */
+        if (raw == btn_prev) {
+            btn_cnt = 0;
+        } else {
+            if (++btn_cnt >= BTN_DEBOUNCE_TICKS) {
+                btn_prev   = raw;
+                btn_stable = raw;
+                btn_cnt    = 0;
 
-        switch (s_state) {
-        case RGB_OFF:
-            if (k1) {
-                s_state = RGB_SOLID;
-                ESP_LOGI(TAG, "→ 常亮");
+                /* 边沿：按下触发切换 */
+                if (btn_stable) {
+                    s_on = !s_on;
+                    if (s_on) {
+                        s_brightness = BRIGHTNESS_DEFAULT;
+                    }
+                    ESP_LOGI(TAG, "%s (亮度=%d)", s_on ? "开灯" : "关灯", s_brightness);
+                    showColor();
+                }
             }
-            break;
-
-        case RGB_SOLID:
-            if (k1) {
-                s_state = RGB_OFF;
-                fillColor(0, 0, 0);
-                ESP_LOGI(TAG, "→ 熄灭");
-            } else if (k2) {
-                s_state = RGB_BREATHING;
-                ESP_LOGI(TAG, "→ 呼吸灯");
-            }
-            break;
-
-        case RGB_BREATHING:
-            if (k1) {
-                s_state = RGB_OFF;
-                fillColor(0, 0, 0);
-                ESP_LOGI(TAG, "→ 熄灭");
-            } else if (k2) {
-                s_state = RGB_CYCLE;
-                ESP_LOGI(TAG, "→ 色相循环");
-            }
-            break;
-
-        case RGB_CYCLE:
-            if (k1) {
-                s_state = RGB_OFF;
-                fillColor(0, 0, 0);
-                ESP_LOGI(TAG, "→ 熄灭");
-            } else if (k2) {
-                s_state = RGB_SOLID;
-                ESP_LOGI(TAG, "→ 常亮");
-            }
-            break;
         }
 
-        switch (s_state) {
-        case RGB_SOLID:
-            fillColor(255, 255, 255);
-            break;
-        case RGB_BREATHING: {
-            uint32_t t = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
-            float phase = (float)(t % BREATH_PERIOD_MS) / (float)BREATH_PERIOD_MS;
-            float sinVal = (sinf(phase * 2.0f * M_PI - M_PI / 2.0f) + 1.0f) / 2.0f;
-            float b = BREATH_MIN + (1.0f - BREATH_MIN) * sinVal;
-            uint8_t v = (uint8_t)(b * 255.0f);
-            fillColor(v, v, v);
-            break;
-        }
-        case RGB_CYCLE: {
-            uint32_t t = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
-            float hue = fmodf((float)t / (float)CYCLE_PERIOD_MS * 360.0f, 360.0f);
-            float r, g, b;
-            hsvToRgb(hue, 1.0f, 1.0f, &r, &g, &b);
-            fillColor((uint8_t)(r * 255), (uint8_t)(g * 255), (uint8_t)(b * 255));
-            break;
-        }
-        default:
-            break;
+        /* ── 旋钮读数 ── */
+        int32_t cur = s_enc_raw;
+        int32_t delta = cur - enc_last;
+        enc_last = cur;
+        if (delta != 0) {
+            /* 每 2 个原始脉冲 = 1 个刻度 */
+            int steps = (int)(delta / 2);
+            if (steps != 0) {
+                s_brightness += steps * BRIGHTNESS_STEP;
+                if (s_brightness < 0)             s_brightness = 0;
+                if (s_brightness > BRIGHTNESS_MAX) s_brightness = BRIGHTNESS_MAX;
+                ESP_LOGI(TAG, "亮度=%d", s_brightness);
+                if (s_on) showColor();
+            }
         }
 
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(TASK_TICK_MS));
     }
 }
 
-esp_err_t rgbLed_work(i2c_master_bus_handle_t bus)
+/* ─── 公开 API ────────────────────────────────────────────── */
+
+esp_err_t rgbLed_init(void)
 {
-    if (!bus) return ESP_ERR_INVALID_ARG;
+    /* 1. 旋转编码器 GPIO */
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << ROTARY_ENC_A_PIN) |
+                        (1ULL << ROTARY_ENC_B_PIN) |
+                        (1ULL << ROTARY_ENC_SW_PIN),
+        .mode         = GPIO_MODE_INPUT,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io);
+    s_prev_a = gpio_get_level(ROTARY_ENC_A_PIN);
 
-    esp_err_t ret = xl9555Driver_init(bus);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "XL9555 初始化失败");
-        return ret;
-    }
+    /* 2. 启动 500us 定时器轮询 A/B 相 */
+    const esp_timer_create_args_t tmr = {
+        .callback = encPollCB,
+        .name     = "enc_poll",
+    };
+    esp_timer_handle_t timer;
+    esp_timer_create(&tmr, &timer);
+    esp_timer_start_periodic(timer, ENC_POLL_US);
 
+    /* 3. WS2812 */
     s_ws = ws2812Driver_new(RGB_LED_DATA_PIN, RGB_LED_NUM);
     if (!s_ws) {
         ESP_LOGE(TAG, "WS2812 初始化失败");
@@ -167,47 +153,32 @@ esp_err_t rgbLed_work(i2c_master_bus_handle_t bus)
     }
     ws2812Driver_off(s_ws);
 
-    xTaskCreate(rgbLedTask, "rgb_led", 3072, NULL, 2, NULL);
-    ESP_LOGI(TAG, "RGB 灯带任务已启动");
+    /* 4. 主控任务 */
+    xTaskCreate(rgbLedTask, "rgb_led", 3072, NULL, 3, NULL);
+    ESP_LOGI(TAG, "RGB 灯带已启动 (IO%d, %d LEDs)", RGB_LED_DATA_PIN, RGB_LED_NUM);
     return ESP_OK;
 }
 
 esp_err_t rgbLed_setOnOff(bool on)
 {
-    if (on) {
-        s_state = RGB_SOLID;
-        ESP_LOGI(TAG, "外部指令 → 开灯（常亮）");
-    } else {
-        s_state = RGB_OFF;
-        fillColor(0, 0, 0);
-        ESP_LOGI(TAG, "外部指令 → 关灯");
+    s_on = on;
+    if (s_on && s_brightness == 0) {
+        s_brightness = BRIGHTNESS_DEFAULT;
     }
+    showColor();
+    return ESP_OK;
+}
+
+esp_err_t rgbLed_setBrightness(uint8_t val)
+{
+    s_brightness = (int)val;
+    if (s_brightness > BRIGHTNESS_MAX) s_brightness = BRIGHTNESS_MAX;
+    if (s_on) showColor();
     return ESP_OK;
 }
 
 esp_err_t rgbLed_setMode(const char *mode)
 {
-    if (strcmp(mode, "solid") == 0) {
-        s_state = RGB_SOLID;
-        ESP_LOGI(TAG, "外部指令 → 常亮");
-    } else if (strcmp(mode, "breath") == 0) {
-        s_state = RGB_BREATHING;
-        ESP_LOGI(TAG, "外部指令 → 呼吸灯");
-    } else if (strcmp(mode, "rainbow") == 0) {
-        s_state = RGB_CYCLE;
-        ESP_LOGI(TAG, "外部指令 → 彩虹");
-    } else {
-        ESP_LOGW(TAG, "未知模式: %s", mode);
-        return ESP_ERR_INVALID_ARG;
-    }
-    return ESP_OK;
-}
-
-esp_err_t rgbLed_setBrightness(uint8_t pct)
-{
-    if (pct < 10) pct = 10;
-    if (pct > 100) pct = 100;
-    s_brightness = (float)pct / 100.0f;
-    // ESP_LOGI(TAG, "外部指令 → 亮度 %d%%", pct);
-    return ESP_OK;
+    (void)mode;
+    return rgbLed_setOnOff(true);
 }

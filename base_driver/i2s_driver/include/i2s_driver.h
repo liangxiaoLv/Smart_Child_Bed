@@ -43,6 +43,8 @@ esp_err_t i2sDriver_init(int port, const i2sDriver_config_t *config, i2sDriver_h
 esp_err_t i2sDriver_write(i2sDriver_handle_t handle, const uint8_t *data, size_t bytes, size_t *written, uint32_t timeout_ms);
 esp_err_t i2sDriver_read(i2sDriver_handle_t handle, uint8_t *buf, size_t bytes, size_t *read, uint32_t timeout_ms);
 esp_err_t i2sDriver_deinit(i2sDriver_handle_t handle);
+/* 仅重配时钟，不重建通道（避免每次播放 deinit/reinit）*/
+esp_err_t i2sDriver_reconfigClock(i2sDriver_handle_t handle, uint32_t sample_rate, uint8_t bits_per_sample, bool stereo);
 
 #ifdef __cplusplus
 }

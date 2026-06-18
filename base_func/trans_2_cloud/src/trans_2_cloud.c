@@ -381,6 +381,7 @@ static void onCloudCommand(const char *topic, const char *payload)
 static uint8_t *s_audio_buf    = NULL;
 static size_t   s_audio_size   = 0;
 static size_t   s_audio_offset = 0;
+static size_t   s_audio_chunk_cnt = 0;
 
 static void onAudioStart(const char *name, size_t total_size)
 {
@@ -406,7 +407,8 @@ static void onAudioStart(const char *name, size_t total_size)
         ESP_LOGE(TAG, "音频缓冲区分配失败 (%u bytes)", (unsigned)total_size);
         return;
     }
-    s_audio_size = total_size;
+    s_audio_size      = total_size;
+    s_audio_chunk_cnt = 0;
 }
 
 static void onAudioChunk(const uint8_t *data, size_t len)
@@ -420,6 +422,12 @@ static void onAudioChunk(const uint8_t *data, size_t len)
 
     memcpy(s_audio_buf + s_audio_offset, data, len);
     s_audio_offset += len;
+    s_audio_chunk_cnt++;
+
+    unsigned pct = (unsigned)(s_audio_offset * 100 / s_audio_size);
+    ESP_LOGI(TAG, "音频块 #%u: %u bytes, 进度 %u/%u (%u%%)",
+             (unsigned)s_audio_chunk_cnt, (unsigned)len,
+             (unsigned)s_audio_offset, (unsigned)s_audio_size, pct);
 
     if (s_audio_offset >= s_audio_size) {
         ESP_LOGI(TAG, "音频接收完成 (%u bytes)，开始播放", (unsigned)s_audio_size);
@@ -440,8 +448,8 @@ esp_err_t trans2cloud_start(void)
     started = true;
 
     mqttClient_onCommand(onCloudCommand);
-    // mqttClient_onAudioStart(onAudioStart);
-    // mqttClient_onAudioChunk(onAudioChunk);
+    mqttClient_onAudioStart(onAudioStart);
+    mqttClient_onAudioChunk(onAudioChunk);
 
 
     xTaskCreate(reportTask, "rpt2cloud", 3072, NULL, 3, NULL);
