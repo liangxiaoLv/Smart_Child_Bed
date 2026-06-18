@@ -372,3 +372,26 @@ esp_err_t classifyTflite_start(void)
     ESP_LOGI(TAG, "audio classifier ready");
     return ESP_OK;
 }
+
+esp_err_t classifyTflite_predict_i16(const int16_t *mono_samples,
+                                     size_t sample_count,
+                                     acfg_result_t *out_result)
+{
+    if (!s_audio_classifier_ready) {
+        ESP_LOGE(TAG, "classifier not ready, call classifyTflite_start first");
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (mono_samples == NULL || out_result == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (sample_count != ACFG_WINDOW_SAMPLES) {
+        ESP_LOGE(TAG, "invalid sample count: %u, expected %u",
+                 (unsigned)sample_count, (unsigned)ACFG_WINDOW_SAMPLES);
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    return acfg_predict_window_i16(&s_audio_classifier,
+                                   mono_samples,
+                                   sample_count,
+                                   out_result);
+}

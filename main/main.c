@@ -33,7 +33,7 @@ static const char *TAG = "main";
 
 static void micSampleTask(void *arg)
 {
-    micSample_start(arg);
+    micSample_start_classify(arg);
 }
 
 /* 点阵屏时间显示任务，500ms 刷一帧，冒号 1Hz 闪烁 */
