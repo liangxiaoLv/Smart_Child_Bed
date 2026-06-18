@@ -202,17 +202,63 @@ function handleRawMessage(data) {
     else if (data.topic !== undefined) { handleMessage(data.topic, data.payload); }
 }
 
+/* ─── 模拟模式 ──────────────────────────────────────── */
+let simActive = false;
+let simTimeout = null;  /* 3秒内未收到 _sim 标记 → 退出模拟 */
+
 function handleMessage(topic, payload) {
-    addLog(topic, payload);
+    var d, b;
+
+    /* ── bed/status 处理 ── */
     if (topic === TOPIC_STATUS) {
-        var d; try { d = JSON.parse(payload); } catch(e) { return; }
+        try { d = JSON.parse(payload); } catch(e) { return; }
+
+        /* 后台管理发来的模拟数据带有 _sim:1 标记 */
+        if (d._sim === 1) {
+            if (!simActive) addLog('system', '模拟模式 ON (数据源=admin)');
+            simActive = true;
+            clearTimeout(simTimeout);
+            simTimeout = setTimeout(function() { simActive = false; addLog('system', '模拟模式 OFF (数据源=设备)'); }, 3000);
+            updateEnvDisplay(d);
+            /* WiFi名保持不变(模拟数据不含ssid) */
+            resetHeartbeat();
+            return;
+        }
+
+        /* 模拟模式中：忽略无 _sim 标记的真实设备数据 */
+        if (simActive) return;
+
+        /* 正常模式 */
+        addLog(topic, payload);
         updateEnvDisplay(d);
         if (d.ssid) $wifiLabel.textContent = d.ssid;
+
+    /* ── bed/bcg 处理 ── */
     } else if (topic === TOPIC_BCG) {
-        var b; try { b = JSON.parse(payload); } catch(e) { return; }
+        try { b = JSON.parse(payload); } catch(e) { return; }
+
+        if (b._sim === 1) {
+            simActive = true;
+            clearTimeout(simTimeout);
+            simTimeout = setTimeout(function() { simActive = false; addLog('system', '模拟模式 OFF (数据源=设备)'); }, 3000);
+            updateBcgDisplay(b);
+            resetHeartbeat();
+            return;
+        }
+
+        if (simActive) return;
+
+        addLog(topic, payload);
         updateBcgDisplay(b);
+
+    /* ── bed/heartbeat 处理 ── */
     } else if (topic === TOPIC_HEARTBEAT) {
+        if (simActive) return;
+        addLog(topic, payload);
         resetHeartbeat();
+
+    } else {
+        addLog(topic, payload);
     }
 }
 
