@@ -29,6 +29,13 @@
 
 
 static const char *TAG = "main";
+
+
+static void micSampleTask(void *arg)
+{
+    micSample_start(arg);
+}
+
 /* 点阵屏时间显示任务，500ms 刷一帧，冒号 1Hz 闪烁 */
 static void displayTask(void *arg)
 {
@@ -81,7 +88,8 @@ void app_main(void)
 #endif
     /* RGB 灯带 + 旋转编码器（WS2812 IO13，旋钮调亮度，按键开关） */
     rgbLed_init();
-
+    /* 麦克风采样与 WiFi 并行: 先启 I2S, 避免等 WiFi 期间时钟未输出 */
+    xTaskCreate(micSampleTask, "mic_sample", 8192, i2c0_bus, 5, NULL);
     /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
     wifiConnect_init();
 

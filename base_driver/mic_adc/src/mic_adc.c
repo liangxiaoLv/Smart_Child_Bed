@@ -21,8 +21,9 @@ typedef struct {
     const audio_codec_if_t      *codec_if;
     const audio_codec_data_if_t *data_if;
     esp_codec_dev_handle_t       dev;
-    i2s_chan_handle_t            tx_chan;   /* 仅用于产生 MCLK, 不传给 esp_codec_dev */
+    i2s_chan_handle_t            tx_chan;
     i2s_chan_handle_t            rx_chan;
+    uint8_t                      channel_num;
 } mic_adc_t;
 
 esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle)
@@ -31,6 +32,8 @@ esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle)
 
     mic_adc_t *adc = calloc(1, sizeof(mic_adc_t));
     if (!adc) return ESP_ERR_NO_MEM;
+
+    adc->channel_num = cfg->channel_num ? cfg->channel_num : 2;
 
     esp_err_t ret = ESP_OK;
 
@@ -126,17 +129,7 @@ esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle)
         goto fail;
     }
 
-    /* TX+RX 同时使能 */
-    ret = i2s_channel_enable(adc->tx_chan);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "i2s_channel_enable(TX) fail: %s", esp_err_to_name(ret));
-        goto fail;
-    }
-    ret = i2s_channel_enable(adc->rx_chan);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "i2s_channel_enable(RX) fail: %s", esp_err_to_name(ret));
-        goto fail;
-    }
+    /* 不在此处 enable — 由 esp_codec_dev_open 管理 RX, TX 在 open 后补开 */
 
     /* ── 2. 创建 I2C 控制接口 ────────────────────────────────────── */
     audio_codec_i2c_cfg_t i2c_cfg = {
@@ -196,7 +189,7 @@ esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle)
 
     esp_codec_dev_sample_info_t fs = {
         .bits_per_sample = 16,
-        .channel         = (uint8_t)cfg->channel_num,
+        .channel         = adc->channel_num,
         .channel_mask    = 0,
         .sample_rate     = cfg->sample_rate,
         .mclk_multiple   = 0,
@@ -207,11 +200,18 @@ esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle)
         goto fail;
     }
 
+    /* ES7210 为 I2S Slave, 录音时也必须保持 TX 输出 MCLK/BCLK/WS */
+    ret = i2s_channel_enable(adc->tx_chan);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "esp_codec_dev_open 后 TX 使能失败: %s", esp_err_to_name(ret));
+        goto fail;
+    }
+
     /* dump ES7210 关键寄存器, 确认芯片状态 */
     adc->codec_if->dump_reg(adc->codec_if);
 
-    ESP_LOGI(TAG, "初始化完成: SR=%"PRIu32"Hz, ch=%d, mic_mask=0x%02X",
-             cfg->sample_rate, cfg->channel_num, cfg->mic_mask);
+    ESP_LOGI(TAG, "初始化完成: SR=%"PRIu32"Hz, ch=%d, mic_mask=0x%02X, DIN=GPIO%d",
+             cfg->sample_rate, cfg->channel_num, cfg->mic_mask, cfg->din_io);
 
     *handle = adc;
     return ESP_OK;
@@ -224,13 +224,49 @@ fail:
     return ret;
 }
 
+esp_err_t mic_adc_apply_board_patch(mic_adc_handle_t handle)
+{
+    if (!handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    mic_adc_t *adc = (mic_adc_t *)handle;
+    if (!adc->codec_if || !adc->codec_if->set_reg) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const audio_codec_if_t *c = adc->codec_if;
+    int ret = 0;
+
+    /* 本板: 片内偏置 2.87V, MIC1 电源, REG4B=0x11 (偏置+ADC1) */
+    ret |= c->set_reg(c, 0x41, 0x70);
+    ret |= c->set_reg(c, 0x42, 0x70);
+    ret |= c->set_reg(c, 0x47, 0x3E);
+    ret |= c->set_reg(c, 0x48, 0x1E);
+    ret |= c->set_reg(c, 0x4B, 0x11);
+    ret |= c->set_reg(c, 0x4C, 0x00);
+    ret |= c->set_reg(c, 0x43, 0x1C);   /* PGA ≈ 34.5dB */
+    ret |= c->set_reg(c, 0x1B, 0xC8);   /* ADC1 直通 */
+    ret |= c->set_reg(c, 0x13, 0x00);   /* 关闭 automute */
+
+    if (ret != 0) {
+        ESP_LOGE(TAG, "板级 patch 失败");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "板级 ES7210 patch 完成 (REG4B=0x11, bias=0x70)");
+    c->dump_reg(c);
+    return ESP_OK;
+}
+
 int mic_adc_read(mic_adc_handle_t handle, int16_t *buf, int samples)
 {
     if (!handle || !buf || samples <= 0) return -1;
 
     mic_adc_t *adc = (mic_adc_t *)handle;
     static int zero_cnt = 0;
-    int ret = esp_codec_dev_read(adc->dev, buf, samples * sizeof(int16_t));
+    size_t bytes_req = (size_t)samples * adc->channel_num * sizeof(int16_t);
+    int ret = esp_codec_dev_read(adc->dev, buf, bytes_req);
     if (ret < 0) {
         ESP_LOGE(TAG, "read error: %d", ret);
         return -1;
@@ -243,7 +279,7 @@ int mic_adc_read(mic_adc_handle_t handle, int16_t *buf, int samples)
         return 0;
     }
     zero_cnt = 0;
-    return ret / sizeof(int16_t);
+    return (int)(ret / (sizeof(int16_t) * adc->channel_num));
 }
 
 esp_err_t mic_adc_deinit(mic_adc_handle_t handle)

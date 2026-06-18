@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 /* mmWave 接口（extern 声明避免循环依赖）
  * 当前未启用，模块启用后取消 #if 0 */
 #if 0

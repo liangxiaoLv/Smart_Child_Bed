@@ -141,13 +141,14 @@
 /* ═══════════════════════════════════════════════════════════════
  * I2S0 — 预留（原 ES8388，驱动保留但不使用）
  * ═══════════════════════════════════════════════════════════════ */
-#define I2S_MCLK_PIN        GPIO_NUM_3
-#define I2S_BCLK_PIN        GPIO_NUM_46
-#define I2S_WS_PIN          GPIO_NUM_9
-#define I2S_DOUT_PIN        GPIO_NUM_10
-#define I2S_DIN_PIN         GPIO_NUM_14
-#define I2S_PORT_NUM        0
-
+#ifdef DNESP32_BOARD 
+#define I2S_MCLK_PIN        GPIO_NUM_3      /* I2S0_MCK，与 LCD_G5 复用 */
+#define I2S_BCLK_PIN        GPIO_NUM_46     /* I2S0_SCK，与 LCD_G4 复用 */
+#define I2S_WS_PIN          GPIO_NUM_9      /* I2S0_LRCK，与 LCD_G3 复用 */
+#define I2S_DOUT_PIN        GPIO_NUM_47     /* I2S0_DOUT → ES8388 SDIN (原理图 IO47) */
+#define I2S_DIN_PIN         GPIO_NUM_10     /* I2S0_DIN ← ES7210 SDOUT1 (原理图 IO10) */
+#define I2S_PORT_NUM        0               /* I2S 端口号 */
+#endif
 /* ═══════════════════════════════════════════════════════════════
  * I2S1 — AW88399QNR 音频功放
  * ═══════════════════════════════════════════════════════════════ */
@@ -211,5 +212,6 @@
 #define ES7210_I2S_BCLK_PIN  GPIO_NUM_46    /* 位时钟 */
 #define ES7210_I2S_LRCK_PIN  GPIO_NUM_9     /* 左右声道时钟 */
 #define ES7210_I2S_DIN_PIN   GPIO_NUM_14    /* ADC 数据 (ES7210 SDOUT1 → ESP32 DIN) */
+#define ES7210_I2S_DIN_ALT_PIN  GPIO_NUM_10    /* 原理图备选 IO10 */
 #define ES7210_INT_PIN       GPIO_NUM_12    /* 中断输出 */
 

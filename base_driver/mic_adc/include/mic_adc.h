@@ -43,6 +43,12 @@ esp_err_t mic_adc_init(const mic_adc_config_t *cfg, mic_adc_handle_t *handle);
 int mic_adc_read(mic_adc_handle_t handle, int16_t *buf, int samples);
 
 /**
+ * 板级 ES7210 寄存器补丁 (esp_codec_dev 默认 REG4B=0x00 在本板会静音)
+ * 须在 mic_adc_init() 成功后调用。
+ */
+esp_err_t mic_adc_apply_board_patch(mic_adc_handle_t handle);
+
+/**
  * 关闭并释放麦克风 ADC
  */
 esp_err_t mic_adc_deinit(mic_adc_handle_t handle);

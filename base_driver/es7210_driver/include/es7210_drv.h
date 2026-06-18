@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include "esp_err.h"
 #include "driver/i2c_master.h"
 #include <stdint.h>
@@ -15,6 +16,16 @@ extern "C" {
 #define ES7210_DRV_SEL_MIC4   (1 << 3)
 
 typedef void *es7210_drv_handle_t;
+
+/** MIC 扫描单项结果 */
+typedef struct {
+    uint8_t  mic_mask;   /* ES7210_DRV_SEL_MICx */
+    uint8_t  i2s_slot;   /* 0=左, 1=右 */
+    int32_t  min_v;
+    int32_t  max_v;
+    int32_t  peak;       /* max(|min|, |max|) */
+    int      score;
+} es7210_mic_scan_result_t;
 
 /* 常用寄存器声明 */
 #define  ES7210_RESET_REG00                 0x00        /* 复位控制 
@@ -133,10 +144,11 @@ typedef struct {
     int bclk_io;                          /* BCLK 引脚 */
     int ws_io;                            /* LRCK/WS 引脚 */
     int din_io;                           /* DIN 引脚 (接 ES7210 SDOUT) */
-    uint32_t sample_rate;                 /* 采样率 (Hz), 如 16000 */
-    uint8_t  mic_mask;                    /* 麦克风通道掩码 */
+    uint32_t sample_rate;                 /* 采样率 (Hz), 如 48000 */
+    uint8_t  mic_mask;                    /* 麦克风通道掩码 (板级模式用) */
     uint8_t  pga_gain;                    /* 模拟 PGA 增益 (0~14, 每档 3dB) */
     uint8_t  total_slots;                 /* I2S 总 slot 数 (2=STD立体声, 4=TDM四通道) */
+    bool     use_ref_example;             /* true=照抄 04-audio_es7210 官方例程 */
 } es7210_drv_config_t;
 
 /**
@@ -161,9 +173,55 @@ esp_err_t es7210_drv_init(const es7210_drv_config_t *cfg, es7210_drv_handle_t *h
 int es7210_drv_read(es7210_drv_handle_t handle, int16_t *buf, int samples);
 
 /**
+ * @brief  获取 I2S 每帧 slot 数 (MONO=1, STEREO=2, TDM=N)
+ */
+uint8_t es7210_drv_get_slots(es7210_drv_handle_t handle);
+
+/**
+ * @brief  采样前重新应用 MIC 通路 (复位/WiFi 后寄存器可能被改写)
+ */
+void es7210_drv_prepare_capture(es7210_drv_handle_t handle);
+
+/**
  * @brief  打印 ES7210 全部寄存器值 (调试用)
  */
 void es7210_drv_dump_regs(es7210_drv_handle_t handle);
+
+/**
+ * @brief  获取当前 I2S DIN 引脚号 (自动探测后可能与配置不同)
+ */
+int es7210_drv_get_din_pin(es7210_drv_handle_t handle);
+
+/**
+ * @brief  获取自动探测后的 I2S 声道 slot (0=左, 1=右)
+ */
+uint8_t es7210_drv_get_mic_slot(es7210_drv_handle_t handle);
+
+/**
+ * @brief  获取当前选中的 MIC 掩码
+ */
+uint8_t es7210_drv_get_mic_mask(es7210_drv_handle_t handle);
+
+/**
+ * @brief  切换 ES7210 麦克风通道 (MIC1/2/3/4 之一)
+ */
+esp_err_t es7210_drv_switch_mic(es7210_drv_handle_t handle, uint8_t mic_mask);
+
+/**
+ * @brief  扫描 MIC1/MIC2/MIC3, 测试左右 I2S slot, 选用得分最高的一路
+ *
+ * @param handle    已初始化的句柄
+ * @param buf       读缓冲 (≥ buf_frames × slots × int16)
+ * @param buf_frames 每次 I2S 读取帧数
+ * @param best      输出最优结果
+ */
+esp_err_t es7210_drv_scan_mics(es7210_drv_handle_t handle, int16_t *buf, int buf_frames,
+                               es7210_mic_scan_result_t *best);
+
+/**
+ * @brief  读取 ADC1 电平寄存器 (0x1B, 调试用)
+ */
+uint8_t es7210_drv_read_adc1_level(es7210_drv_handle_t handle);
 
 /**
  * @brief  下电并释放 ES7210 + I2S 资源
