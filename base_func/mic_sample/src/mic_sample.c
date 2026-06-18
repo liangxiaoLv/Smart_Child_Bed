@@ -127,7 +127,7 @@ esp_err_t micSample_start(void *bus)
         return ESP_ERR_NO_MEM;
     }
 
-    es7210_drv_dump_regs(es7210);
+    // es7210_drv_dump_regs(es7210);
     vTaskDelay(pdMS_TO_TICKS(300));
     discardWarmup(es7210, read_buf, READ_FRAMES);
     ESP_LOGI(TAG, "I2S 预热完成 (slots=%d, DIN=GPIO%d, 参考例程 TDM)",
@@ -303,7 +303,7 @@ esp_err_t micSample_start_classify(void *bus)
         return ESP_ERR_NO_MEM;
     }
 
-    es7210_drv_dump_regs(es7210);
+    // es7210_drv_dump_regs(es7210);
     vTaskDelay(pdMS_TO_TICKS(300));
     discardWarmup(es7210, read_buf, READ_FRAMES);
     ESP_LOGI(TAG, "I2S 预热完成 (slots=%d, DIN=GPIO%d, 参考例程 TDM)",

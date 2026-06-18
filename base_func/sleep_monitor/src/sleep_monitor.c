@@ -363,10 +363,10 @@ static void dispatchReport(const bcgFrame_t *f)
             int16_t t2 = ((int16_t)f->arg[tail-6]  << 8) | f->arg[tail-5];
             int16_t t1 = ((int16_t)f->arg[tail-4]  << 8) | f->arg[tail-3];
             int16_t t0 = ((int16_t)f->arg[tail-2]  << 8) | f->arg[tail-1];
-            ESP_LOGI(TAG, "[%lu][上报] channel=%u time=%lu samples=%d "
-                     "前5=[%d,%d,%d,%d,%d] 后5=[%d,%d,%d,%d,%d]",
-                     esp_log_timestamp(), f->channel, sTime, cnt,
-                     s0, s1, s2, s3, s4, t4, t3, t2, t1, t0);
+            // ESP_LOGI(TAG, "[%lu][上报] channel=%u time=%lu samples=%d "
+            //          "前5=[%d,%d,%d,%d,%d] 后5=[%d,%d,%d,%d,%d]",
+            //          esp_log_timestamp(), f->channel, sTime, cnt,
+            //          s0, s1, s2, s3, s4, t4, t3, t2, t1, t0);
         }
         break;
 

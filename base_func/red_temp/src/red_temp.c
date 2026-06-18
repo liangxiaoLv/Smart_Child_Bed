@@ -43,7 +43,7 @@ static void parseFrame(const uint8_t *arr)
     int frameNum  = arr[infoOff + 0]  | (arr[infoOff + 1]  << 8);
     int bodyTemp  = arr[253] | (arr[254] << 8);
     float bodyTempC = (float)bodyTemp / 10.0f;
-    ESP_LOGI(TAG, "#%d 体温:%.1f°C", frameNum, bodyTempC);
+    // ESP_LOGI(TAG, "#%d 体温:%.1f°C", frameNum, bodyTempC);
 
     if (IRTempIsValid(bodyTempC)) {
         trans2cloud_updateBodyTemp(bodyTempC);
