@@ -1,13 +1,13 @@
-# ESP32-C3 分区表 — 16MB Flash (QIO)
+# ESP32-C3 分区表 — 4MB Flash
 #
 # 地址空间布局：
 #   0x000000 - 0x008000  32KB   Bootloader (固定)
 #   0x008000 - 0x009000   4KB   分区表 (固定)
-#   0x009000 - 0xFFFFFF        以下自定义分区
+#   0x009000 - 0x3FFFFF        以下自定义分区
 #
 # Name,        Type, SubType, Offset,   Size,      Flags
 nvs,           data, nvs,     0x9000,   0x6000,
 phy_init,      data, phy,     0xF000,   0x1000,
-factory,       app,  factory, 0x10000,  0x400000,
-factory_nvs,   data, nvs,     0x410000, 0x10000,
-storage,       data, fat,     0x420000, 0xBE0000,
+factory,       app,  factory, 0x10000,  0x1E0000,
+factory_nvs,   data, nvs,     0x1F0000, 0x10000,
+storage,       data, fat,     0x200000, 0x200000,

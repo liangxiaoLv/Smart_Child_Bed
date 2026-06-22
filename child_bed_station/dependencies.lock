@@ -44,5 +44,5 @@ direct_dependencies:
 - espressif/network_provisioning
 - idf
 manifest_hash: 1201401fb602ccc9cd44ecd8ce14194e2a43dc140c00e98ee2b9a6c5f7c0e4db
-target: esp32s3
+target: esp32c3
 version: 3.0.0

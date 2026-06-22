@@ -8,8 +8,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#define TEST_LED_PIN    GPIO_NUM_10      /* IO10 — LED 正极，负极接地，高电平点亮 */
-#define BTN_PIN         GPIO_NUM_5      /* IO5 — 按钮，按下接地（低电平有效），内部上拉 */
+#define TEST_LED_PIN    GPIO_NUM_2      /* IO2 — LED 正极，负极接地，高电平点亮 */
+#define BTN_PIN         GPIO_NUM_3      /* IO3 — 按钮，按下接地（低电平有效），内部上拉 */
 
 static const char *TAG = "main";
 
