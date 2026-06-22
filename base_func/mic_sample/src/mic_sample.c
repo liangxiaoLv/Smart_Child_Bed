@@ -11,6 +11,7 @@
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -433,6 +434,20 @@ esp_err_t micSample_start_classify(void *bus)
         goto keep_alive;
     }
 
+    /* ── 重配置 TWDT：不再监控 idle task，改为监控本任务 ── */
+    esp_task_wdt_deinit();
+    {
+        esp_task_wdt_config_t wdt_cfg = {
+            .timeout_ms     = 30000,
+            .idle_core_mask = 0,        /* 不监控任何 idle task */
+            .trigger_panic  = true,
+        };
+        esp_task_wdt_init(&wdt_cfg);
+    }
+    esp_task_wdt_add(NULL);             /* 订阅当前任务 (mic_sample) */
+    ESP_LOGI(TAG, "TWDT 已切换为监控 mic_sample 任务 (超时=%ds)",
+             30);
+
     {
         int16_t *cls_buf = heap_caps_malloc(ACFG_WINDOW_SAMPLES * sizeof(int16_t),
                                              MALLOC_CAP_SPIRAM);
@@ -444,6 +459,7 @@ esp_err_t micSample_start_classify(void *bus)
 
         int cls_pos = 0;
         int window_idx = 0;
+        int read_cnt = 0;               /* I2S 读取计数，用于定期喂狗 */
 
         ESP_LOGI(TAG, "══════ 开始持续分类 (窗口=%d样本/%.2fs, hop=%d样本/%.2fs) ══════",
                  ACFG_WINDOW_SAMPLES,
@@ -493,12 +509,24 @@ esp_err_t micSample_start_classify(void *bus)
                             (size_t)keep * sizeof(int16_t));
                 }
                 cls_pos = keep;
+
+                /* 推理后喂狗 + 多让一些时间给 UART 等任务 */
+                esp_task_wdt_reset();
+                vTaskDelay(pdMS_TO_TICKS(50));
             }
 
-            vTaskDelay(pdMS_TO_TICKS(10));
+            /* 每 ~50 次 I2S 读取喂一次狗，双重保险 */
+            if (++read_cnt >= 50) {
+                esp_task_wdt_reset();
+                read_cnt = 0;
+            }
+
+            vTaskDelay(1);
         }
 
         free(cls_buf);
+        esp_task_wdt_delete(NULL);
+        esp_task_wdt_deinit();
         return ESP_OK;
     }
 

@@ -104,7 +104,7 @@ static void reportTask(void *arg)
             s_aqi, s_tvoc, s_eco2,
             s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move,
             s_body_temp);
-
+    
         ESP_LOGI(TAG, "bcg_person=%d bcg_breath=%d bcg_heart=%d bcg_move=%d body_temp=%.1f",
                  s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move, (double)s_body_temp);
 

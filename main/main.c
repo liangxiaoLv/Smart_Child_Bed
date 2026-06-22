@@ -94,30 +94,30 @@ void app_main(void)
     wifiConnect_init();
 
 
-    // uart1 使用体温传感器
-    uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
-    IRTemp_start();
-    /* BCG 睡眠监护仪 */
-    uartDriver_switch_device(UART2_PORT_NUM, UART2_DEVICE_BCG);
-    ESP_ERROR_CHECK(sleepMonitor_init());
-    vTaskDelay(pdMS_TO_TICKS(500));
-    sleepMonitor_setAutoReportMode();
+    // // uart1 使用体温传感器
+    // uartDriver_switch_device(UART1_PORT_NUM, UART1_DEVICE_IRTEMP);
+    // IRTemp_start();
+    // /* BCG 睡眠监护仪 */
+    // uartDriver_switch_device(UART2_PORT_NUM, UART2_DEVICE_BCG);
+    // ESP_ERROR_CHECK(sleepMonitor_init());
+    // vTaskDelay(pdMS_TO_TICKS(500));
+    // sleepMonitor_setAutoReportMode();
 #if 0
     // uart2 使用毫米波雷达
     uartDriver_switch_device(UART2_PORT_NUM, UART2_DEVICE_RADAR);
     mm_wave_radar_info();
 #endif
-    rgbScreen16x16x4_init();
-    /* NTP 时间同步（东八区） */
-    setenv("TZ", "CST-8", 1);
-    tzset();
-    esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    esp_sntp_setservername(0, "ntp.aliyun.com");
-    esp_sntp_init();
+    // rgbScreen16x16x4_init();
+    // /* NTP 时间同步（东八区） */
+    // setenv("TZ", "CST-8", 1);
+    // tzset();
+    // esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    // esp_sntp_setservername(0, "ntp.aliyun.com");
+    // esp_sntp_init();
 
-    /* 启动时间显示任务 */
-    xTaskCreate(displayTask, "rgb_time", 3072, NULL, 2, NULL);
+    // /* 启动时间显示任务 */
+    // xTaskCreate(displayTask, "rgb_time", 3072, NULL, 2, NULL);
 
-    ESP_LOGI(TAG, "系统初始化完成");
+    // ESP_LOGI(TAG, "系统初始化完成");
 
 }
