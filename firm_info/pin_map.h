@@ -154,14 +154,15 @@
  * ═══════════════════════════════════════════════════════════════ */
 #define I2S1_BCK_PIN        GPIO_NUM_4      /* I2S1 位时钟 */
 #define I2S1_LRCK_PIN       GPIO_NUM_5      /* I2S1 字选 (LRCK) */
-#define I2S1_DIN_PIN        GPIO_NUM_6      /* I2S1 数据输入（AW88399 → ESP32，备用） */
-#define I2S1_DOUT_PIN       GPIO_NUM_7      /* I2S1 数据输出（ESP32 → AW88399 SDIN） */
+#define I2S1_DOUT_PIN       GPIO_NUM_6      /* I2S1 数据输出（ESP32 → AW88399 DATAI） */
+#define I2S1_DIN_PIN        GPIO_NUM_7      /* I2S1 数据输入（AW88399 DATAO → ESP32，喇叭回采） */
 #define I2S1_PORT_NUM       1
 
 /* ═══════════════════════════════════════════════════════════════
  * AW88399QNR — 音频功放（挂载于 I2C0）
  * ═══════════════════════════════════════════════════════════════ */
-#define AW88399QNR_I2C_ADDR 0x40            /* 7-bit I2C 地址 */
+#define AW88399QNR_I2C_ADDR 0x34            /* 7-bit I2C 地址 (ADDR脚接GND) */
+#define AW88399_PA_RSTN_PIN  GPIO_NUM_8     /* 功放复位, 低电平有效 */
 
 /* ═══════════════════════════════════════════════════════════════
  * WS2812 RGB 灯带 — RMT

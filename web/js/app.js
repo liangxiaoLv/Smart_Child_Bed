@@ -179,6 +179,7 @@ const TOPIC_STATUS      = 'bed/status';
 const TOPIC_HEARTBEAT   = 'bed/heartbeat';
 const TOPIC_CONTROL     = 'bed/control';
 const TOPIC_BCG         = 'bed/bcg';
+const TOPIC_WEB_SLEEP   = 'web/sleep';
 
 /* ─── DOM ────────────────────────────────────────────── */
 const $dot      = document.getElementById('online-dot');
@@ -250,6 +251,15 @@ function handleMessage(topic, payload) {
 
         addLog(topic, payload);
         updateBcgDisplay(b);
+
+    /* ── web/sleep 处理 ── */
+    } else if (topic === TOPIC_WEB_SLEEP) {
+        try { var s = JSON.parse(payload); } catch(e) { return; }
+        var section = document.getElementById('web-sleep-section');
+        if (section) section.style.display = 'block';
+        var stateText = (s.sleep_state === 'deep') ? '深度睡眠' : (s.sleep_state || '--');
+        setId('val-web-sleep', stateText);
+        addLog(topic, payload);
 
     /* ── bed/heartbeat 处理 ── */
     } else if (topic === TOPIC_HEARTBEAT) {

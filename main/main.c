@@ -12,7 +12,7 @@
 #include "uart_driver.h"
 #include "rotary_encoder.h"
 #include "wav_player.h"
-#include "aw88399qnr_driver.h"
+#include "aw883xx_driver.h"
 
 #include "esp_log.h"
 #include "esp_err.h"
@@ -23,6 +23,7 @@
 #include "freertos/task.h"
 #include "esp_sntp.h"
 #include <time.h>
+#include <stdio.h>
 
 
 #include "pin_map.h"
@@ -30,7 +31,37 @@
 
 static const char *TAG = "main";
 
+#define I2C0_SCAN_ADDR_START 0x30
+#define I2C0_SCAN_ADDR_END   0x5C
+#define I2C0_SCAN_TIMEOUT_MS 50
 
+static void i2c0_scan_devices(i2c_master_bus_handle_t bus)
+{
+    int found_count = 0;
+    char found_addrs[256] = {0};
+    size_t offset = 0;
+
+    ESP_LOGI(TAG, "I2C0 scan start: 0x%02X-0x%02X",
+             I2C0_SCAN_ADDR_START, I2C0_SCAN_ADDR_END);
+
+    for (uint8_t addr = I2C0_SCAN_ADDR_START; addr <= I2C0_SCAN_ADDR_END; addr++) {
+        esp_err_t ret = i2cDriver_probe(bus, addr, I2C0_SCAN_TIMEOUT_MS);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "I2C0 device found at 0x%02X", addr);
+            int written = snprintf(found_addrs + offset, sizeof(found_addrs) - offset,
+                                   "%s0x%02X", found_count ? ", " : "", addr);
+            if (written > 0) {
+                size_t remain = sizeof(found_addrs) - offset;
+                offset += (written < remain) ? written : remain - 1;
+            }
+            found_count++;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+
+    ESP_LOGI(TAG, "I2C0 scan done, found %d device(s)", found_count);
+    ESP_LOGI(TAG, "I2C0 devices: %s", found_count ? found_addrs : "none");
+}
 static void micSampleTask(void *arg)
 {
     micSample_start_classify(arg);
@@ -61,19 +92,23 @@ static void displayTask(void *arg)
 
 void app_main(void)
 {
-    /* 初始化 I2C 总线（集中管理） */
+    // /* 初始化 I2C 总线（集中管理） */
     i2c_master_bus_handle_t i2c0_bus;
     ESP_ERROR_CHECK(i2cDriver_initBus(I2C0_PORT_NUM, I2C0_SDA_PIN, I2C0_SCL_PIN, &i2c0_bus));
+    i2c0_scan_devices(i2c0_bus);
+    i2c_master_bus_handle_t i2c1_bus;
+    ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
+    i2c0_scan_devices(i2c1_bus);
 
     // /* 初始化 I2C1 总线 */
 
-    
-    /*初始化IO扩展芯片并点亮LED*/
-    ESP_ERROR_CHECK(aw9523bDriver_init(i2c0_bus, NULL));
-    /* P0.0 接 LED, 设为输出, 拉低点亮 */
-    ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
-    ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
-    ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
+
+    // /*初始化IO扩展芯片并点亮LED*/
+    // ESP_ERROR_CHECK(aw9523bDriver_init(i2c0_bus, NULL));
+    // /* P0.0 接 LED, 设为输出, 拉低点亮 */
+    // ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
+    // ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
+    // ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
 #if 0
     /* 初始化音频功放 AW88399QNR（I2C0, addr=0x40） */
     esp_err_t wav_err = wavPlayer_init(i2c0_bus);
@@ -81,17 +116,17 @@ void app_main(void)
         ESP_LOGE(TAG, "wavPlayer_init 失败: %s，音频功能不可用", esp_err_to_name(wav_err));
     } else {
         /* I2C 写入方式诊断：自动测试 12 种寄存器读写方法 */
-        aw88399qnr_testWrites();
+        aw883xx_testWrites();
         /* 诊断完成后播正弦波验证 */
         wavPlayer_testTone(440, 2000, 32000);
     }
 #endif
-    /* RGB 灯带 + 旋转编码器（WS2812 IO13，旋钮调亮度，按键开关） */
-    rgbLed_init();
-    /* 麦克风采样与 WiFi 并行: 先启 I2S, 避免等 WiFi 期间时钟未输出 */
-    xTaskCreate(micSampleTask, "mic_sample", 8192, i2c0_bus, 5, NULL);
-    /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
-    wifiConnect_init();
+    // /* RGB 灯带 + 旋转编码器（WS2812 IO13，旋钮调亮度，按键开关） */
+    // rgbLed_init();
+    // /* 麦克风采样与 WiFi 并行: 先启 I2S, 避免等 WiFi 期间时钟未输出 */
+    // xTaskCreate(micSampleTask, "mic_sample", 8192, i2c0_bus, 5, NULL);
+    // /*连接wifi（内部注册 IP_EVENT_STA_GOT_IP → 自动启 MQTT + 云端上报）*/
+    // wifiConnect_init();
 
 
     // // uart1 使用体温传感器

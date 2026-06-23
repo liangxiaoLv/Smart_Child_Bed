@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "src/aw88399qnr_driver.c"
     INCLUDE_DIRS "include" "${CMAKE_SOURCE_DIR}/firm_info"
-    REQUIRES i2c_driver esp_common freertos
+    REQUIRES i2c_driver esp_common freertos driver esp_driver_gpio
 )

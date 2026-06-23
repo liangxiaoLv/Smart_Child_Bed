@@ -12,19 +12,19 @@ extern "C" {
 /** @brief AW88399QNR 音频功放初始化（DSP 旁路模式）
  *
  * 挂载到对应 I2C 总线，校验 CHIPID (0x32)，配置 I2S 输入格式和初始音量（80%）。
- * 寄存器为 8-bit 访问，地址映射参考官方 aw883xx PID_2183 寄存器表。
- * 本驱动使用 DSP 旁路模式（I2S → DAC 直通），不加载固件。
+ * 寄存器为 8-bit 访问（地址 8-bit，数据 1 字节），地址映射参考官方 aw883xx
+ * PID_2183 寄存器表低字节。本驱动使用 DSP 旁路模式（I2S→DAC 直通），不加载固件。
  *
  * @param bus  I2C 总线句柄
  * @return ESP_OK / 错误码
  */
 esp_err_t aw88399qnr_init(i2c_master_bus_handle_t bus);
 
-/** @brief 掉电并释放设备 */
+/** @brief 静音并释放设备（SYSCTRL = PWDN | AMPPD | DSPBY） */
 esp_err_t aw88399qnr_deinit(void);
 
 /** @brief 设置音量
- * @param pct  0（静音）~ 100（最大）
+ * @param pct  0（静音）~ 100（最大，0dB）
  */
 esp_err_t aw88399qnr_setVolume(uint8_t pct);
 
@@ -40,7 +40,7 @@ bool aw88399qnr_isInited(void);
  */
 esp_err_t aw88399qnr_setSampleRate(uint32_t sample_rate);
 
-/** @brief I2C 寄存器读写诊断（8-bit 模式 + 2字节连续读） */
+/** @brief 寄存器读写诊断（CHIPID/SYSCTRL/SYSCTRL2/I2SCTRL1/I2SCTRL3） */
 void aw88399qnr_testWrites(void);
 
 #ifdef __cplusplus

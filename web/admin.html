@@ -86,6 +86,15 @@
             </div>
         </section>
 
+        <!-- ═══ Web 睡眠 ═══ -->
+        <section class="panel">
+            <h2><span class="icon">💤</span> Web 睡眠</h2>
+            <div class="btn-row">
+                <button class="btn btn-sleep" onclick="sendWebSleep('deep')">😴 睡眠</button>
+            </div>
+            <p class="sim-hint" style="margin-top:8px;">点击后向 MQTT topic <code>web/sleep</code> 发送 <code>{"sleep_state":"deep"}</code>，子设备订阅该 topic 后可收到睡眠指令。</p>
+        </section>
+
         <!-- ═══ 数据模拟 ═══ -->
         <section class="panel">
             <h2><span class="icon">📊</span> 数据模拟 (→ 8080 环境监测 + BCG体征)</h2>
@@ -253,6 +262,11 @@
         function sendCmd(cmd, value) {
             const ok = wsSend({ topic: 'bed/control', payload: JSON.stringify({ cmd: cmd, value: value }) });
             if (ok) addLog('发送 → bed/control: ' + cmd + '=' + value, 'log-tx');
+        }
+
+        function sendWebSleep(state) {
+            const ok = wsSend({ topic: 'web/sleep', payload: JSON.stringify({ sleep_state: state }) });
+            if (ok) addLog('发送 → web/sleep: sleep_state=' + state, 'log-tx');
         }
 
         function sendStationCmd(cmd, value) {

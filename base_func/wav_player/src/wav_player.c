@@ -1,6 +1,6 @@
 #include "wav_player.h"
 #include "i2s_driver.h"
-#include "aw88399qnr_driver.h"
+#include "aw883xx_driver.h"
 #include "pin_map.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -178,7 +178,7 @@ esp_err_t wavPlayer_init(i2c_master_bus_handle_t bus)
 {
     if (!bus) return ESP_ERR_INVALID_ARG;
 
-    esp_err_t ret = aw88399qnr_init(bus);
+    esp_err_t ret = aw883xx_init(bus);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "AW88399QNR 初始化失败");
         return ret;
@@ -253,9 +253,9 @@ esp_err_t wavPlayer_play(const uint8_t *data, size_t len)
     /* 参数与上次相同：直接复用已有通道，无需任何 init/reconfig */
 
     /* 同步采样率到 AW88399QNR 的 I2SCTRL1 */
-    aw88399qnr_setSampleRate(sample_rate);
+    aw883xx_setSampleRate(sample_rate);
 
-    aw88399qnr_setVolume(s_volume_pct);
+    aw883xx_setVolume(s_volume_pct);
 
     BaseType_t r = xTaskCreate(playTask, "wav_play", 4096,
                                NULL, 5, &s_play_task);
@@ -284,7 +284,7 @@ esp_err_t wavPlayer_setVolume(uint8_t pct)
 {
     if (pct > 100) pct = 100;
     s_volume_pct = pct;
-    return aw88399qnr_setVolume(pct);
+    return aw883xx_setVolume(pct);
 }
 
 bool wavPlayer_isPlaying(void)
@@ -325,7 +325,7 @@ esp_err_t wavPlayer_testTone(uint32_t freq_hz, uint32_t duration_ms, uint32_t sa
         s_cur_bits = 16;
     }
 
-    aw88399qnr_setVolume(s_volume_pct);
+    aw883xx_setVolume(s_volume_pct);
 
     /* 每次生成一小段正弦波，直接写入 I2S，不经过 playTask */
     size_t chunk_samples = (size_t)sample_rate * TONE_CHUNK_MS / 1000;
