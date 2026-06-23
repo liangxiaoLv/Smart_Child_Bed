@@ -52,6 +52,7 @@
         .btn-stop   { background: #e74c3c; color: #fff; flex: 2; }
         .btn-sleep  { background: #7b68ee; color: #fff; flex: 1; }
         .btn-wake   { background: #ffa500; color: #fff; flex: 1; }
+        .btn-fever  { background: #e74c3c; color: #fff; flex: 1; }
 
         .sim-controls { margin-top: 16px; }
         .sim-hint { font-size: 12px; color: #888; margin-top: 8px; }
@@ -81,18 +82,11 @@
         <section class="panel">
             <h2><span class="icon">🛏️</span> 场景模拟</h2>
             <div class="btn-row">
-                <button class="btn btn-sleep" onclick="sendCmd('sleep', 1)">😴 睡着</button>
-                <button class="btn btn-wake"  onclick="sendCmd('sleep', 0)">🔔 醒来</button>
+                <button class="btn btn-sleep" onclick="sendWebSleep('deep')">😴 睡着</button>
+                <button class="btn btn-wake"  onclick="sendWebSleep('awake')">🔔 醒来</button>
+                <button class="btn btn-sleep" onclick="sendWebLulling()">🍼 哄睡</button>
             </div>
-        </section>
-
-        <!-- ═══ Web 睡眠 ═══ -->
-        <section class="panel">
-            <h2><span class="icon">💤</span> Web 睡眠</h2>
-            <div class="btn-row">
-                <button class="btn btn-sleep" onclick="sendWebSleep('deep')">😴 睡眠</button>
-            </div>
-            <p class="sim-hint" style="margin-top:8px;">点击后向 MQTT topic <code>web/sleep</code> 发送 <code>{"sleep_state":"deep"}</code>，子设备订阅该 topic 后可收到睡眠指令。</p>
+            <p class="sim-hint" style="margin-top:8px;">"睡着/醒来"向 <code>web/sleep</code> 发送状态；"哄睡"向 <code>web/lulling</code> 发送 <code>{"lulling_state":"start"}</code>。</p>
         </section>
 
         <!-- ═══ 数据模拟 ═══ -->
@@ -216,6 +210,15 @@
                 <button class="btn btn-sleep" id="btn-warn" onclick="toggleWarning()">⚠ 发出提醒</button>
             </div>
         </section>
+
+        <!-- ═══ 发烧模拟 ═══ -->
+        <section class="panel">
+            <h2><span class="icon">🌡️</span> 发烧模拟 (→ bed/fever)</h2>
+            <div class="btn-row">
+                <button class="btn btn-fever" onclick="sendFeverSim()">🔥 发送发烧通知</button>
+            </div>
+            <p class="sim-hint">向 <code>bed/fever</code> 发送体温 38.7°C 的提醒通知，子设备订阅该 topic 可接收。</p>
+        </section>
     </main>
 
     <section class="log-panel">
@@ -278,6 +281,23 @@
             if (ok) addLog('发送 → web/sleep: sleep_state=' + state, 'log-tx');
         }
 
+        function sendWebLulling() {
+            const ok = wsSend({ topic: 'web/lulling', payload: JSON.stringify({ lulling_state: 'start' }) });
+            if (ok) addLog('发送 → web/lulling: lulling_state=start', 'log-tx');
+        }
+
+        function sendFeverSim() {
+            const payload = JSON.stringify({
+                body_temp: 38.7,
+                notification: {
+                    title: "Temperature Update",
+                    body: "Emma's latest reading looks different.\nYou may want to check on her."
+                }
+            });
+            const ok = wsSend({ topic: 'bed/fever', payload: payload });
+            if (ok) addLog('发送 → bed/fever: body_temp=38.7°C 发烧通知', 'log-tx');
+        }
+
         function sendStationCmd(cmd, value) {
             const ok = wsSend({ topic: 'station/control', payload: JSON.stringify({ cmd: cmd, value: value }) });
             if (ok) addLog('发送 → station/control: ' + cmd + '=' + value, 'log-tx');
@@ -310,25 +330,24 @@
         function publishSimData() {
             const d = readForm();
 
-            // 1. bed/status — 环境数据 (带 _sim:1 标记, 8080据此切换数据源)
-            const status = JSON.stringify({
-                _sim:      1,
-                env_temp:  d.env_temp,
-                env_hum:   d.env_hum,
-                aqi:       d.aqi,
-                tvoc:      d.tvoc,
-                eco2:      d.eco2,
-                bcg_person: d.bcg_person,
-                bcg_breath: d.bcg_breath,
-                bcg_heart:  d.bcg_heart,
-                bcg_move:   d.bcg_move,
-                bcg_stress:      d.bcg_stress,
-                bcg_fatigue:     d.bcg_fatigue,
-                bcg_sleep:       d.bcg_sleep,
-                bcg_breath_hold: d.bcg_breath_hold,
-                audio_num_test:  d.audio_num_test,
-                body_temp: d.body_temp,
-            });
+            // 1. bed/status — 与固件 reportTask 结构完全一致（仅前缀 _sim:1）
+            const status = '{"_sim":1,' +
+                '"ssid":"模拟",' +
+                '"env_temp":' + d.env_temp.toFixed(1) + ',' +
+                '"env_hum":'  + d.env_hum.toFixed(1)  + ',' +
+                '"aqi":' + d.aqi   + ',' +
+                '"tvoc":' + d.tvoc  + ',' +
+                '"eco2":' + d.eco2  + ',' +
+                '"bcg_person":' + d.bcg_person + ',' +
+                '"bcg_breath":' + d.bcg_breath + ',' +
+                '"bcg_heart":'  + d.bcg_heart  + ',' +
+                '"bcg_move":'   + d.bcg_move   + ',' +
+                '"bcg_sleep":'       + d.bcg_sleep       + ',' +
+                '"bcg_fatigue":'     + d.bcg_fatigue     + ',' +
+                '"bcg_breath_hold":' + d.bcg_breath_hold + ',' +
+                '"bcg_stress":'      + d.bcg_stress      + ',' +
+                '"audio_num_test":' + d.audio_num_test + ',' +
+                '"body_temp":' + d.body_temp.toFixed(1) + '}';
             wsSend({ topic: 'bed/status', payload: status });
 
             // 2. bed/heartbeat — 心跳

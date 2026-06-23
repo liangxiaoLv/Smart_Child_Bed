@@ -240,7 +240,7 @@ function handleMessage(topic, payload) {
         try { var s = JSON.parse(payload); } catch(e) { return; }
         var section = document.getElementById('web-sleep-section');
         if (section) section.style.display = 'block';
-        var stateText = (s.sleep_state === 'deep') ? '深度睡眠' : (s.sleep_state || '--');
+        var stateText = {deep:'深度睡眠', awake:'清醒'}[s.sleep_state] || s.sleep_state || '--';
         setId('val-web-sleep', stateText);
         addLog(topic, payload);
 
