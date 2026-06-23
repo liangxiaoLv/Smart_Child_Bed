@@ -28,12 +28,12 @@ static const char *TAG = "trans_cloud";
 /* ─── 最新传感器数据（各传感器模块更新写入）───────────────── */
 
 // 环境温湿度 ens210传感器
-static float  s_env_temp  = 0;   // 环境温度
-static float  s_env_hum   = 0;   // 环境湿度
+static float  s_env_temp  = 28;   // 环境温度
+static float  s_env_hum   = 60;   // 环境湿度
 // 空气质量 ens160传感器
-static uint8_t  s_aqi     = 0;   // 空气质量指数
-static uint16_t s_tvoc    = 0;   // 总挥发性有机化合物浓度
-static uint16_t s_eco2    = 0;   // 二氧化碳浓度
+static uint8_t  s_aqi     = 0;   // 空气质量指数  优秀
+static uint16_t s_tvoc    = 330;   // 总挥发性有机化合物浓度 ppb
+static uint16_t s_eco2    = 561;   // 二氧化碳浓度 ppm
 
 
 
@@ -41,16 +41,23 @@ static uint16_t s_eco2    = 0;   // 二氧化碳浓度
 static uint8_t s_bcg_person   = 0; // 检测是否有人
 static uint8_t s_radar_person = 0; 
 
-static uint8_t s_bcg_move        = 0; // 0=不体动 1=小体动
-static uint8_t s_radar_move      = 0; // 0=无体动 1=小体动 2=大体动
+static uint8_t s_bcg_move        = 0; // 0=无体动 1=小体动 2=大体动
+static uint8_t s_radar_move      = 0; // 0=不体动 1=小体动 
 
 static uint8_t s_bcg_breath      = 0; // 呼吸频率（次/分钟）
 static uint8_t s_radar_breath    = 0; 
 
 static uint8_t s_bcg_heart       = 0;  // 心率（次/分钟）
-static uint8_t s_radar_heart     = 0; 
+static uint8_t s_radar_heart     = 0;
+
+static uint16_t s_bcg_stress      = 0;  // 压力指数
+static uint8_t  s_bcg_fatigue     = 0;  // 疲劳状态
+static uint8_t  s_bcg_sleep       = 0;  // 睡眠状态
+static uint8_t  s_bcg_breath_hold = 0;  // 憋气状态
 
 static uint8_t s_radar_status    = 0;   /*毫米波监测状态 0=未监测 1=监测中 2=未监测(有报告) 3=等待时间 */
+
+static uint8_t s_audio_num_test   = 4;
 
 static bool    s_radar_sleep_recording  = false;
 
@@ -98,15 +105,21 @@ static void reportTask(void *arg)
             "\"env_temp\":%.1f,\"env_hum\":%.1f,"
             "\"aqi\":%d,\"tvoc\":%d,\"eco2\":%d,"
             "\"bcg_person\":%d,\"bcg_breath\":%d,\"bcg_heart\":%d,\"bcg_move\":%d,"
+            "\"bcg_sleep\":%d,\"bcg_fatigue\":%d,\"bcg_breath_hold\":%d,\"bcg_stress\":%d,"
+            "\"audio_num_test\":%d,"
             "\"body_temp\":%.1f}",
             s_ssid,
             s_env_temp, s_env_hum,
             s_aqi, s_tvoc, s_eco2,
             s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move,
+            s_bcg_sleep, s_bcg_fatigue, s_bcg_breath_hold, s_bcg_stress,
+            s_audio_num_test,
             s_body_temp);
     
-        ESP_LOGI(TAG, "bcg_person=%d bcg_breath=%d bcg_heart=%d bcg_move=%d body_temp=%.1f",
-                 s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move, (double)s_body_temp);
+        ESP_LOGI(TAG, "person=%d move=%d heart=%d rr=%d sleep=%d fatigue=%d breath_hold=%d stress=%d body_temp=%.1f",
+                 s_bcg_person, s_bcg_move, s_bcg_heart, s_bcg_breath,
+                 s_bcg_sleep, s_bcg_fatigue, s_bcg_breath_hold, s_bcg_stress,
+                 (double)s_body_temp);
 
         mqttClient_publish(TOPIC_STATUS, json);
         vTaskDelay(pdMS_TO_TICKS(PUBLISH_INTERVAL_MS));
@@ -176,6 +189,32 @@ void trans2cloud_updateBcg(uint8_t person, uint8_t breath,
     s_bcg_breath = breath;
     s_bcg_heart  = heart;
     s_bcg_move   = move;
+}
+
+void trans2cloud_updateBcgStress(uint16_t stress)
+{
+    s_bcg_stress = stress;
+}
+
+void trans2cloud_updateBcgFatigue(uint8_t fatigue)
+{
+    s_bcg_fatigue = fatigue;
+}
+
+/*------------BCG 0x020B 体征数据更新（睡眠/疲劳/憋气/压力）------------*/
+void trans2cloud_updateBcgVital(uint8_t sleep, uint8_t fatigue,
+                                uint8_t breath_hold, uint16_t stress)
+{
+    s_bcg_sleep       = sleep;
+    s_bcg_fatigue     = fatigue;
+    s_bcg_breath_hold = breath_hold;
+    s_bcg_stress      = stress;
+}
+
+/*------------音频数量更新接口------------*/
+void trans2cloud_updateAudioNumTest(uint8_t num)
+{
+    s_audio_num_test = num;
 }
 
 /*------------是否有睡眠报告------------*/

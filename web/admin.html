@@ -187,6 +187,15 @@
                 </div>
             </div>
 
+            <!-- 音频 -->
+            <h3 style="font-size:13px;color:#aaa;margin:16px 0 10px;">🎵 音频</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>音频数量</label>
+                    <input type="number" id="in-audio-num" value="4" step="1" min="0" max="99">
+                </div>
+            </div>
+
             <!-- 控制按钮 -->
             <div class="sim-controls">
                 <div class="btn-row">
@@ -289,17 +298,11 @@
                 bcg_breath: parseInt(document.getElementById('in-bcg-rr').value)     || 16,
                 bcg_heart:  parseInt(document.getElementById('in-bcg-hr').value)     || 72,
                 bcg_move:   parseInt(document.getElementById('in-bcg-move').value)   || 0,
-            };
-        }
-
-        function readBcgForm() {
-            return {
-                hr:      parseInt(document.getElementById('in-bcg-hr').value)      || 72,
-                rr:      parseInt(document.getElementById('in-bcg-rr').value)      || 16,
-                sleep:   parseInt(document.getElementById('in-bcg-sleep').value)   || 2,
-                fatigue: parseInt(document.getElementById('in-bcg-fatigue').value) || 25,
-                breath:  parseInt(document.getElementById('in-bcg-breath').value)  || 0,
-                strest:   parseInt(document.getElementById('in-bcg-stress').value)  || 35,
+                bcg_stress:       parseInt(document.getElementById('in-bcg-stress').value)  || 0,
+                bcg_fatigue:      parseInt(document.getElementById('in-bcg-fatigue').value) || 0,
+                bcg_sleep:        parseInt(document.getElementById('in-bcg-sleep').value)   || 0,
+                bcg_breath_hold:  parseInt(document.getElementById('in-bcg-breath').value)  || 0,
+                audio_num_test:   parseInt(document.getElementById('in-audio-num').value)    || 0,
             };
         }
 
@@ -319,24 +322,16 @@
                 bcg_breath: d.bcg_breath,
                 bcg_heart:  d.bcg_heart,
                 bcg_move:   d.bcg_move,
+                bcg_stress:      d.bcg_stress,
+                bcg_fatigue:     d.bcg_fatigue,
+                bcg_sleep:       d.bcg_sleep,
+                bcg_breath_hold: d.bcg_breath_hold,
+                audio_num_test:  d.audio_num_test,
                 body_temp: d.body_temp,
             });
             wsSend({ topic: 'bed/status', payload: status });
 
-            // 2. bed/bcg — BCG 体征数据 (带 _sim:1)
-            const b = readBcgForm();
-            const bcg = JSON.stringify({
-                _sim:    1,
-                hr:      b.hr,
-                rr:      b.rr,
-                sleep:   b.sleep,
-                fatigue: b.fatigue,
-                breath:  b.breath,
-                strest:   b.strest,
-            });
-            wsSend({ topic: 'bed/bcg', payload: bcg });
-
-            // 3. bed/heartbeat — 心跳
+            // 2. bed/heartbeat — 心跳
             wsSend({ topic: 'bed/heartbeat', payload: '"online"' });
 
             simCount++;
@@ -355,7 +350,7 @@
             document.getElementById('btn-stop').disabled = false;
             setSimBadge(true);
             document.getElementById('sim-hint').textContent = '✅ 模拟已启动。8080 页面收到 _sim:1 标记后切换为模拟数据（无闪烁）。WiFi 名称保持设备真实值。"停止模拟"后 3 秒恢复真实数据。';
-            addLog('模拟已启动 (500ms/帧), bed/status + bed/bcg 带 _sim:1 标记', 'log-sim');
+            addLog('模拟已启动 (500ms/帧), bed/status 带 _sim:1 标记', 'log-sim');
         }
 
         /* ─── 手动更新 ──────────────────────── */
@@ -363,11 +358,11 @@
             if (!simTimer) {
                 // 未开始模拟时也可以单次推送
                 publishSimData();
-                addLog('单次推送 → bed/status + bed/bcg (带_sim标记)', 'log-sim');
+                addLog('单次推送 → bed/status (带_sim标记)', 'log-sim');
                 return;
             }
             publishSimData();
-            addLog('手动更新 #' + simCount + ' → bed/status + bed/bcg (带_sim标记) + heartbeat_sim', 'log-sim');
+            addLog('手动更新 #' + simCount + ' → bed/status (带_sim标记) + heartbeat_sim', 'log-sim');
         }
 
         /* ─── 停止模拟 ──────────────────────── */

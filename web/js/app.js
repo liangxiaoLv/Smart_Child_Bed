@@ -178,7 +178,6 @@ const AUDIO_SOURCE_BASE = 'http://60.205.235.150:8080/source/';
 const TOPIC_STATUS      = 'bed/status';
 const TOPIC_HEARTBEAT   = 'bed/heartbeat';
 const TOPIC_CONTROL     = 'bed/control';
-const TOPIC_BCG         = 'bed/bcg';
 const TOPIC_WEB_SLEEP   = 'web/sleep';
 
 /* ─── DOM ────────────────────────────────────────────── */
@@ -208,7 +207,7 @@ let simActive = false;
 let simTimeout = null;  /* 3秒内未收到 _sim 标记 → 退出模拟 */
 
 function handleMessage(topic, payload) {
-    var d, b;
+    var d;
 
     /* ── bed/status 处理 ── */
     if (topic === TOPIC_STATUS) {
@@ -221,6 +220,7 @@ function handleMessage(topic, payload) {
             clearTimeout(simTimeout);
             simTimeout = setTimeout(function() { simActive = false; addLog('system', '模拟模式 OFF (数据源=设备)'); }, 3000);
             updateEnvDisplay(d);
+            updateBcgFromStatus(d);
             /* WiFi名保持不变(模拟数据不含ssid) */
             resetHeartbeat();
             return;
@@ -232,25 +232,8 @@ function handleMessage(topic, payload) {
         /* 正常模式 */
         addLog(topic, payload);
         updateEnvDisplay(d);
+        updateBcgFromStatus(d);
         if (d.ssid) $wifiLabel.textContent = d.ssid;
-
-    /* ── bed/bcg 处理 ── */
-    } else if (topic === TOPIC_BCG) {
-        try { b = JSON.parse(payload); } catch(e) { return; }
-
-        if (b._sim === 1) {
-            simActive = true;
-            clearTimeout(simTimeout);
-            simTimeout = setTimeout(function() { simActive = false; addLog('system', '模拟模式 OFF (数据源=设备)'); }, 3000);
-            updateBcgDisplay(b);
-            resetHeartbeat();
-            return;
-        }
-
-        if (simActive) return;
-
-        addLog(topic, payload);
-        updateBcgDisplay(b);
 
     /* ── web/sleep 处理 ── */
     } else if (topic === TOPIC_WEB_SLEEP) {
@@ -284,7 +267,7 @@ function updateEnvDisplay(d) {
     setCard('eco2',      d.eco2,            'ppm');
 }
 
-/* ─── BCG 体征更新 ───────────────────────────────────── */
+/* ─── BCG 体征更新（从 bed/status 字段读取）────────────── */
 function sleepStateText(v) { return {0:'觉醒',1:'浅睡',2:'深睡',3:'快速眼动',4:'离床'}[v] || '--'; }
 function fatigueText(v) {
     if (v === undefined || v === null) return '--';
@@ -301,20 +284,22 @@ function stressText(v) {
     return '高度应激 (' + v + ')';
 }
 
-function updateBcgDisplay(b) {
-    if (b.hr      !== undefined) setCard('bcg-hr',          b.hr,                    'bpm');
-    if (b.rr      !== undefined) setCard('bcg-rr',          b.rr,                    '次/分');
-    if (b.sleep   !== undefined) setId('val-bcg-sleep',     sleepStateText(b.sleep));
-    if (b.fatigue !== undefined) setId('val-bcg-fatigue',   fatigueText(b.fatigue));
-    if (b.breath  !== undefined) setId('val-bcg-breath-hold', breathHoldText(b.breath));
-    if (b.stress  !== undefined) setId('val-bcg-stress',    stressText(b.stress));
+function updateBcgFromStatus(d) {
+    if (d.bcg_heart       !== undefined) setCard('bcg-hr',          d.bcg_heart,                 'bpm');
+    if (d.bcg_breath      !== undefined) setCard('bcg-rr',          d.bcg_breath,                '次/分');
+    if (d.bcg_sleep       !== undefined) setId('val-bcg-sleep',     sleepStateText(d.bcg_sleep));
+    if (d.bcg_fatigue     !== undefined) setId('val-bcg-fatigue',   fatigueText(d.bcg_fatigue));
+    if (d.bcg_breath_hold !== undefined) setId('val-bcg-breath-hold', breathHoldText(d.bcg_breath_hold));
+    if (d.bcg_stress      !== undefined) setId('val-bcg-stress',    stressText(d.bcg_stress));
+    if (d.bcg_person      !== undefined) setId('val-bcg-person',    d.bcg_person ? '有人' : '无人');
+    if (d.bcg_move        !== undefined) setId('val-bcg-move',      d.bcg_move   ? '有体动' : '静止');
+    if (d.audio_num_test  !== undefined) setId('val-audio-num',     d.audio_num_test);
     /* 更新时间戳 */
     var now = new Date();
     setId('val-bcg-time',
         now.getHours().toString().padStart(2,'0') + ':' +
         now.getMinutes().toString().padStart(2,'0') + ':' +
         now.getSeconds().toString().padStart(2,'0'));
-    resetHeartbeat();
 }
 
 /* 写 card-value，并同步更新紧邻的 card-unit */

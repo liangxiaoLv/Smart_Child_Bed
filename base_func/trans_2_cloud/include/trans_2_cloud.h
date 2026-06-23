@@ -13,7 +13,12 @@ void trans2cloud_updateRadarFull(uint8_t person, uint8_t breath,
                                  uint8_t mod_status);
 void trans2cloud_updateBcg(uint8_t person, uint8_t breath,
                            uint8_t heart, uint8_t move);
+void trans2cloud_updateBcgStress(uint16_t stress);
+void trans2cloud_updateBcgFatigue(uint8_t fatigue);
+void trans2cloud_updateBcgVital(uint8_t sleep, uint8_t fatigue,
+                                uint8_t breath_hold, uint16_t stress);
 void trans2cloud_updateSleepRecord(bool recording);
+void trans2cloud_updateAudioNumTest(uint8_t num);
 void trans2cloud_updateBodyTemp(float temp_c);
 /** 日期时间（年月日时分） */
 typedef struct {

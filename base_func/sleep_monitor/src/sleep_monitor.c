@@ -1,7 +1,7 @@
 #include "sleep_monitor.h"
 #include "pin_map.h"
 #include "uart_driver.h"
-#include "cloud_mqtt.h"
+#include "trans_2_cloud.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -317,14 +317,13 @@ static void dispatchReport(const bcgFrame_t *f)
 
     case 0x0202:   /* HR/RR/在离床/体动 */
         if (f->arg_len >= 4) {
+            uint8_t bed = f->arg[3];
+            uint8_t person = (bed != 0x00) ? 1 : 0;
+            uint8_t move   = (bed == 0x02) ? 1 : 0;
             ESP_LOGI(TAG, "[%lu][上报] channel=%u HR=%u RR=%u bed=%s",
                      esp_log_timestamp(), f->channel,
-                     f->arg[1], f->arg[2], bedStateStr(f->arg[3]));
-            char buf[128];
-            snprintf(buf, sizeof(buf),
-                     "{\"hr\":%u,\"rr\":%u,\"bed\":%u}",
-                     f->arg[1], f->arg[2], f->arg[3]);
-            mqttClient_publish("bed/bcg", buf);
+                     f->arg[1], f->arg[2], bedStateStr(bed));
+            trans2cloud_updateBcg(person, f->arg[2], f->arg[1], move);
         }
         break;
 
@@ -337,11 +336,7 @@ static void dispatchReport(const bcgFrame_t *f)
                      sleepStateStr(f->arg[1]), f->arg[2], fatigueStr(f->arg[2]),
                      breathHoldStr(f->arg[3]), stress, stressStr(stress),
                      bedStateStr(f->arg[6]));
-            char buf[128];
-            snprintf(buf, sizeof(buf),
-                     "{\"sleep\":%u,\"fatigue\":%u,\"breath\":%u,\"stress\":%u,\"bed\":%u}",
-                     f->arg[1], f->arg[2], f->arg[3], stress, f->arg[6]);
-            mqttClient_publish("bed/bcg", buf);
+            trans2cloud_updateBcgVital(f->arg[1], f->arg[2], f->arg[3], stress);
         }
         break;
 
