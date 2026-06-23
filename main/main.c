@@ -99,11 +99,11 @@ void app_main(void)
     i2c_master_bus_handle_t i2c1_bus;
     ESP_ERROR_CHECK(i2cDriver_initBus(I2C1_PORT_NUM, I2C1_SDA_PIN, I2C1_SCL_PIN, &i2c1_bus));
 
-    /*初始化IO扩展芯片并点亮板上LED*/
-    ESP_ERROR_CHECK(aw9523bDriver_init(i2c0_bus, NULL));
-    /* P0.0 接 LED, 设为输出, 拉低点亮 */
-    ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
-    ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
+    // /*初始化IO扩展芯片并点亮板上LED*/
+    // ESP_ERROR_CHECK(aw9523bDriver_init(i2c0_bus, NULL));
+    // /* P0.0 接 LED, 设为输出, 拉低点亮 */
+    // ESP_ERROR_CHECK(aw9523bDriver_setDir(AW_PIN_P00, AW_PIN_OUT));
+    // ESP_ERROR_CHECK(aw9523bDriver_setPin(AW_PIN_P00, AW_PIN_LOW));
     ESP_LOGI(TAG, "AW9523B P0.0 LED lighted");
 #if 0
     /* 初始化音频功放 AW88399QNR（I2C0, addr=0x40） */
@@ -143,9 +143,9 @@ void app_main(void)
     esp_sntp_setservername(0, "ntp.aliyun.com");
     esp_sntp_init();
 
-    // /* 启动时间显示任务 */
-    // xTaskCreate(displayTask, "rgb_time", 3072, NULL, 2, NULL);
+    /* 启动时间显示任务 */
+    xTaskCreate(displayTask, "rgb_time", 3072, NULL, 2, NULL);
 
-    // ESP_LOGI(TAG, "系统初始化完成");
+    ESP_LOGI(TAG, "系统初始化完成");
 
 }

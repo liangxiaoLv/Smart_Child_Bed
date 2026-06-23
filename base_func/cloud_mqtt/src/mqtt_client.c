@@ -18,6 +18,7 @@
 #define TOPIC_HEARTBEAT    "bed/heartbeat"
 #define TOPIC_AUDIO_START  "bed/audio_start"
 #define TOPIC_AUDIO        "bed/audio"
+#define TOPIC_WEB_LULLING  "web/lulling"
 
 static const char *TAG = "mqtt";
 
@@ -48,7 +49,8 @@ static void mqttEventHandler(void *arg, esp_event_base_t base,
         esp_mqtt_client_subscribe(s_client, TOPIC_CONTROL, MQTT_QOS_AT_LEAST_ONCE);
         esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO_START, MQTT_QOS_AT_LEAST_ONCE);
         esp_mqtt_client_subscribe(s_client, TOPIC_AUDIO, MQTT_QOS_AT_LEAST_ONCE);
-        ESP_LOGI(TAG, "已订阅: %s, %s, %s", TOPIC_CONTROL, TOPIC_AUDIO_START, TOPIC_AUDIO);
+        esp_mqtt_client_subscribe(s_client, TOPIC_WEB_LULLING, MQTT_QOS_AT_LEAST_ONCE);
+        ESP_LOGI(TAG, "已订阅: %s, %s, %s, %s", TOPIC_CONTROL, TOPIC_AUDIO_START, TOPIC_AUDIO, TOPIC_WEB_LULLING);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
@@ -99,7 +101,8 @@ static void mqttEventHandler(void *arg, esp_event_base_t base,
                     if (p) fsize = (size_t)atol(p + 1);
                 }
                 s_audio_start_cb(name, fsize);
-            } else if (strcmp(topic, TOPIC_CONTROL) == 0) {
+            } else if (strcmp(topic, TOPIC_CONTROL) == 0 ||
+                       strcmp(topic, TOPIC_WEB_LULLING) == 0) {
                 for (int i = 0; i < CMD_CB_MAX; i++) {
                     if (s_cmd_cbs[i]) {
                         s_cmd_cbs[i](topic, payload);

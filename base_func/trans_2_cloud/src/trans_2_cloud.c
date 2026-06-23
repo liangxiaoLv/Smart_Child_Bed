@@ -95,36 +95,7 @@ static char    s_ssid[33] = "";
 /* 发烧预警冷却时间（毫秒），冷却期内不重复上报 */
 #define FEVER_COOLDOWN_MS  90000
 
-/* ─── 数据上报任务 ─────────────────────────────────────────── */
-static void reportTask(void *arg)
-{
-    char json[512];
-    for (;;) {
-        snprintf(json, sizeof(json),
-            "{\"ssid\":\"%s\","
-            "\"env_temp\":%.1f,\"env_hum\":%.1f,"
-            "\"aqi\":%d,\"tvoc\":%d,\"eco2\":%d,"
-            "\"bcg_person\":%d,\"bcg_breath\":%d,\"bcg_heart\":%d,\"bcg_move\":%d,"
-            "\"bcg_sleep\":%d,\"bcg_fatigue\":%d,\"bcg_breath_hold\":%d,\"bcg_stress\":%d,"
-            "\"audio_num_test\":%d,"
-            "\"body_temp\":%.1f}",
-            s_ssid,
-            s_env_temp, s_env_hum,
-            s_aqi, s_tvoc, s_eco2,
-            s_bcg_person, s_bcg_breath, s_bcg_heart, s_bcg_move,
-            s_bcg_sleep, s_bcg_fatigue, s_bcg_breath_hold, s_bcg_stress,
-            s_audio_num_test,
-            s_body_temp);
-    
-        ESP_LOGI(TAG, "person=%d move=%d heart=%d rr=%d sleep=%d fatigue=%d breath_hold=%d stress=%d body_temp=%.1f",
-                 s_bcg_person, s_bcg_move, s_bcg_heart, s_bcg_breath,
-                 s_bcg_sleep, s_bcg_fatigue, s_bcg_breath_hold, s_bcg_stress,
-                 (double)s_body_temp);
-
-        mqttClient_publish(TOPIC_STATUS, json);
-        vTaskDelay(pdMS_TO_TICKS(PUBLISH_INTERVAL_MS));
-    }
-}
+b
 
 /*------------MQTT心跳监测------------*/
 static void heartbeatTask(void *arg)
@@ -380,7 +351,15 @@ static const cmd_entry_t s_cmd_table[] = {
 /* ── 指令分发 ── */
 static void onCloudCommand(const char *topic, const char *payload)
 {
-    ESP_LOGI(TAG, "收到云端指令: %s", payload);
+    ESP_LOGI(TAG, "收到云端指令 topic=%s payload=%s", topic, payload);
+
+    /* ── web/lulling 哄睡 ── */
+    if (strcmp(topic, "web/lulling") == 0) {
+        ESP_LOGI(TAG, ">>> 收到哄睡指令：点亮LED并设为亮度90 <<<");
+        rgbLed_setOnOff(true);
+        rgbLed_setBrightness(90);
+        return;
+    }
 
     /* 提取 cmd */
     char cmd[32] = {0};

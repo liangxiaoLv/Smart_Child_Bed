@@ -13,8 +13,8 @@
  */
 
 #define ESP_IDF_version "v6.0.0"
-#define YT_ESP32_DEMO_BOARD
-// #define DNESP32_BOARD
+// #define YT_ESP32_DEMO_BOARD
+#define DNESP32_BOARD
 
 /* ═══════════════════════════════════════════════════════════════
  * UART0 — 串口调试 / 固件下载
@@ -46,8 +46,8 @@
  * ═══════════════════════════════════════════════════════════════ */
 #define I2C0_PORT_NUM       0               /* I2C 端口号，对应 I2C_NUM_0 */
 #ifdef DNESP32_BOARD 
-#define I2C0_SDA_PIN        GPIO_NUM_41     /* I2C0 数据线 */
-#define I2C0_SCL_PIN        GPIO_NUM_42     /* I2C0 时钟线 */
+#define I2C0_SDA_PIN        GPIO_NUM_4     /* I2C0 数据线 */
+#define I2C0_SCL_PIN        GPIO_NUM_5     /* I2C0 时钟线 */
 #else
 #define I2C0_SDA_PIN        GPIO_NUM_1     /* I2C0 数据线 */
 #define I2C0_SCL_PIN        GPIO_NUM_2     /* I2C0 时钟线 */
